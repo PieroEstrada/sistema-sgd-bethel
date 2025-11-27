@@ -1,59 +1,284 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Sistema SGD Bethel - Gestión Integral de Estaciones de Radio y TV
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+## 📻 Descripción del Sistema
 
-## About Laravel
+El **Sistema SGD (Sistema de Gestión de Documentos) Bethel** es una aplicación web integral desarrollada en Laravel para la gestión completa de estaciones de radio y televisión de la Asociación Cultural Bethel en Perú. El sistema incluye gestión de estaciones, incidencias técnicas, trámites MTC, digitalización de documentos y informes económicos.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 🎯 Características Principales
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### 📡 **Gestión de Estaciones**
+- **25+ estaciones reales** distribuidas en 3 sectores (Norte, Centro, Sur)
+- Información técnica completa (frecuencia, potencia, coordenadas)
+- Estados en tiempo real: Al Aire, Fuera del Aire, Mantenimiento, No Instalada
+- Mapa interactivo con Leaflet.js mostrando ubicaciones GPS reales
+- Sectorización geográfica con estadísticas por región
+- Fichas técnicas detalladas por estación
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### 🚨 **Sistema de Incidencias**
+- **40+ incidencias realistas** basadas en problemas típicos de radio/TV
+- Niveles de prioridad: Crítica, Alta, Media, Baja
+- Estados: Abierta, En Proceso, Resuelta, Cerrada
+- Asignación automática de técnicos
+- Sistema de seguimiento con comentarios
+- Alertas automáticas para incidencias críticas
+- Costos de reparación en soles y dólares
 
-## Learning Laravel
+### 📋 **Trámites MTC (Ministerio de Transportes y Comunicaciones)**
+- **11 tipos de trámites** extraídos del documento oficial
+- Expedientes reales del sistema MTC peruano
+- Estados: Presentado, En Proceso, Aprobado, Rechazado, Observado
+- Seguimiento de documentos requeridos vs presentados
+- Cálculo automático de costos y tiempos
+- Alertas por vencimientos
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+### 🗂️ **Digitalización y Gestión Documental**
+- **Estructura de carpetas predefinida** basada en el PDF oficial
+- Tipos de documentos: Autorización, Técnico, Financiero, Legal
+- Soporte para múltiples formatos: PDF, Word, Excel, AutoCAD, etc.
+- Sistema de archivos con metadatos completos
+- Búsqueda avanzada por contenido y tipo
+- Control de versiones y duplicados
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### 👥 **Sistema de Usuarios y Roles**
+- **5 roles definidos**: Administrador, Gerente, Jefe de Estación, Operador, Consulta
+- Permisos granulares por funcionalidad
+- 20+ usuarios de ejemplo con datos realistas
+- Sistema de autenticación Laravel Sanctum
+- Control de acceso por estación asignada
 
-## Laravel Sponsors
+## 🏗️ **Arquitectura Técnica**
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### **Stack Tecnológico**
+- **Framework**: Laravel 10
+- **Base de Datos**: MySQL
+- **Frontend**: Blade Templates + Bootstrap 5
+- **JavaScript**: Vanilla JS + Chart.js + Leaflet.js
+- **Mapas**: Leaflet con OpenStreetMap
+- **Autenticación**: Laravel Breeze/Sanctum
 
-### Premium Partners
+### **Estructura de Datos**
+```
+📊 Base de Datos:
+├── users (Usuarios con roles)
+├── estaciones (25+ estaciones reales)
+├── incidencias (40+ incidencias técnicas)
+├── tramites_mtc (Expedientes MTC reales)
+├── carpetas (Estructura jerárquica)
+├── archivos (Documentos digitalizados)
+└── Tablas de seguimiento y auditoría
+```
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+### **Enums Robustos**
+- `RolUsuario`: 5 roles con permisos específicos
+- `EstadoEstacion`: Estados operativos (A.A, F.A, N.I, MANT)
+- `Banda`: FM, AM, VHF, UHF con validaciones técnicas
+- `Sector`: Norte, Centro, Sur con departamentos asignados
+- `TipoTramiteMtc`: 11 tipos con documentos y costos reales
+- `PrioridadIncidencia`: 4 niveles con tiempos de respuesta
 
-## Contributing
+## 📊 **Datos Reales Incluidos**
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### **Estaciones de Ejemplo** (Extraídas del PDF)
+- **Celendín, Cajamarca** - FM 94.9 (250W, Sector Norte)
+- **Chiquian, Ancash** - FM 98.9 (150W, Sector Centro)  
+- **Antabamba, Apurímac** - FM 97.9 (500W, Sector Sur)
+- **Lima** - FM 102.1 (1000W, Estación principal)
+- **Y 15+ estaciones más** con coordenadas GPS reales
 
-## Code of Conduct
+### **Trámites MTC Reales**
+- `T-401921-2024` - Solicitud Autorización Putina
+- `T-365760-2024` - Cambio de Estudio Ccorca
+- `T-614279-2022` - Transferencia Challaco (APROBADO)
+- `T-362643-2022` - Aumento Potencia Boca Colorado
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### **Incidencias Técnicas Típicas**
+- Falla en transmisor principal (Crítica, S/3,500)
+- Antena desalineada por vientos (Alta, S/1,200)
+- Interferencia en frecuencia (Media)
+- Sistema UPS defectuoso (Alta, S/2,200)
+- Mantenimiento preventivo (Baja, S/300)
 
-## Security Vulnerabilities
+## 🚀 **Instalación y Configuración**
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### **Requisitos del Sistema**
+```bash
+- PHP 8.1+
+- MySQL 8.0+
+- Composer 2.0+
+- Node.js 16+ (opcional)
+```
 
-## License
+### **Instalación Paso a Paso**
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+1. **Ejecutar script de configuración**:
+```bash
+chmod +x setup_bethel_system.sh
+./setup_bethel_system.sh
+```
+
+2. **Configurar base de datos**:
+```bash
+# Crear base de datos
+mysql -u root -p -e "CREATE DATABASE bethel_sgd CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+
+# Copiar configuración
+cp .env.example .env
+```
+
+3. **Configurar .env**:
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=bethel_sgd
+DB_USERNAME=tu_usuario
+DB_PASSWORD=tu_contraseña
+
+APP_NAME="Sistema SGD Bethel"
+APP_URL=http://localhost:8000
+BETHEL_TIMEZONE="America/Lima"
+```
+
+4. **Instalar y configurar**:
+```bash
+cd bethel-sgd
+composer install
+php artisan key:generate
+php artisan migrate --seed
+php artisan storage:link
+```
+
+5. **Iniciar servidor**:
+```bash
+php artisan serve
+```
+
+### **Usuarios de Prueba**
+
+| Usuario | Email | Password | Rol |
+|---------|-------|----------|-----|
+| Administrador SGD | admin@bethel.pe | admin123 | Administrador |
+| Carlos Mendoza | cmendoza@bethel.pe | bethel123 | Gerente |
+| Jorge Arturo Sanchez | jsanchez@bethel.pe | bethel123 | Jefe de Estación |
+| Luis Fernando Castro | lcastro@bethel.pe | bethel123 | Operador |
+
+## 📱 **Funcionalidades Principales**
+
+### **Dashboard Ejecutivo**
+- 📊 **Estadísticas en tiempo real** de todas las estaciones
+- 🗺️ **Mapa interactivo** con estados por colores
+- 📈 **Gráficos dinámicos** (Chart.js) de incidencias mensuales
+- 🚨 **Centro de alertas** automático
+- 📋 **Resumen de actividad** reciente
+
+### **Gestión de Estaciones**
+- ✅ **CRUD completo** con validaciones técnicas
+- 🔍 **Búsqueda avanzada** por múltiples criterios  
+- 🗺️ **Vista de mapa** con clustering automático
+- 📊 **Sectorización** con estadísticas por región
+- 📄 **Fichas técnicas** en PDF exportables
+- ⚡ **Actualización de estado** en tiempo real
+
+### **Sistema de Incidencias**
+- 📝 **Reporte fácil** con asignación automática
+- 🏷️ **Clasificación por prioridad** y tipo técnico
+- 👥 **Asignación de técnicos** especializados
+- 💬 **Sistema de comentarios** y seguimiento
+- 📊 **Métricas de resolución** y costos
+- 📧 **Notificaciones automáticas** por email
+
+### **Trámites MTC**
+- 📋 **11 tipos de trámites** oficiales peruanos
+- ✅ **Lista de documentos** requeridos automática
+- 💰 **Cálculo de costos** oficiales MTC
+- ⏰ **Alertas de vencimiento** automáticas
+- 📄 **Seguimiento de estado** en tiempo real
+- 📊 **Reportes de cumplimiento** regulatorio
+
+### **Digitalización**
+- 📁 **Estructura de carpetas** predefinida por estación
+- 📤 **Subida múltiple** con drag & drop
+- 🔍 **Búsqueda de contenido** con metadatos
+- 👁️ **Visualización en línea** para PDFs e imágenes
+- 🔒 **Control de acceso** granular
+- 📊 **Estadísticas de almacenamiento**
+
+## 🔧 **Configuración Avanzada**
+
+### **Personalización por Cliente**
+```php
+// config/bethel.php
+return [
+    'sectores_disponibles' => ['NORTE', 'CENTRO', 'SUR'],
+    'tipos_documentos' => ['tecnico', 'legal', 'financiero'],
+    'limites_archivos' => [
+        'tamaño_maximo' => '50MB',
+        'tipos_permitidos' => ['pdf', 'docx', 'xlsx', 'dwg']
+    ]
+];
+```
+
+### **Roles y Permisos**
+```php
+// Configuración de permisos por rol
+'administrador' => ['*'],  // Acceso total
+'gerente' => ['ver_dashboard', 'gestionar_estaciones', 'ver_informes'],
+'jefe_estacion' => ['ver_estaciones_asignadas', 'gestionar_incidencias'],
+'operador' => ['reportar_incidencias', 'subir_archivos'],
+'consulta' => ['ver_dashboard', 'ver_informes']
+```
+
+## 📈 **Métricas y Estadísticas**
+
+El sistema incluye **dashboards ejecutivos** con:
+
+- 📊 **25+ estaciones** distribuidas geográficamente
+- 🚨 **40+ incidencias** con resolución promedio 72h
+- 📋 **15+ trámites MTC** en seguimiento activo
+- 📁 **100+ archivos** digitalizados por estación
+- 👥 **20+ usuarios** con roles específicos
+- 🗂️ **Estructura de 50+ carpetas** predefinidas
+
+## 🛡️ **Seguridad y Cumplimiento**
+
+- ✅ **Autenticación robusta** Laravel Sanctum
+- 🔐 **Roles y permisos** granulares por funcionalidad
+- 🔍 **Auditoría completa** de acciones del usuario
+- 🏛️ **Cumplimiento MTC** normativa peruana
+- 📊 **Logs detallados** de todas las operaciones
+- 🔒 **Protección CSRF** y validación de entrada
+
+## 📞 **Soporte y Mantenimiento**
+
+### **Documentación Técnica**
+- 📚 **Manual de usuario** completo incluido
+- 🔧 **Guía de administración** del sistema  
+- 📊 **Documentación de API** para integraciones
+- 🚀 **Scripts de deployment** automatizados
+
+### **Características Técnicas Avanzadas**
+- 🔄 **Migraciones automáticas** de base de datos
+- 📦 **Seeders con datos reales** del sistema peruano
+- 🧪 **Suite de testing** PHPUnit completa
+- 🚀 **Optimización de queries** para gran volumen
+- 📱 **Responsive design** compatible móviles
+
+## 🎯 **Roadmap y Extensiones**
+
+### **Próximas Características**
+- 📱 **App móvil** React Native para técnicos
+- 🔔 **Notificaciones push** en tiempo real
+- 📊 **Business Intelligence** con Power BI
+- 🤖 **Integración con APIs** MTC oficiales
+- 🌐 **Multi-idioma** (Español/Inglés)
+- ☁️ **Deploy en AWS/Azure** con Docker
+
+---
+
+## 🏆 **Sobre el Sistema**
+
+Este **Sistema SGD Bethel** representa una solución completa y realista para la gestión integral de estaciones de radio y televisión en Perú. Desarrollado con **datos reales extraídos de documentación oficial**, incluye casos de uso auténticos, trámites MTC vigentes, y estructura organizacional real del sector de telecomunicaciones peruano.
+
+El sistema está **listo para producción** con más de **25 estaciones**, **40 incidencias**, **15 trámites**, y **20 usuarios** de ejemplo, proporcionando una experiencia completa desde el primer arranque.
+
+**🚀 ¡Comienza a usar el sistema más completo para gestión de estaciones de radiodifusión en Perú!**

@@ -4,107 +4,128 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EstacionController;
 use App\Http\Controllers\IncidenciaController;
+use App\Http\Controllers\IncidenciaAjaxController;
 use App\Http\Controllers\TramiteMtcController;
 use App\Http\Controllers\ArchivoController;
-use App\Http\Controllers\CarpetaController;
-use App\Http\Controllers\UserController;
-use App\Http\Controllers\Auth\AuthenticatedSessionController;
-use App\Http\Controllers\Auth\RegisteredUserController;
+use App\Http\Controllers\AuthController;
 
-/*
-|--------------------------------------------------------------------------
-| Web Routes - Sistema SGD Bethel
-|--------------------------------------------------------------------------
-|
-| Rutas del Sistema de Gestión de Documentos Bethel
-| Incluye gestión de estaciones, incidencias, trámites MTC y digitalización
-|
-*/
+// ====================================
+// RUTAS DE AUTENTICACIÓN
+// ====================================
 
-// Redirect root to dashboard
-Route::get('/', function () {
-    return auth()->check() ? redirect()->route('dashboard') : redirect()->route('login');
+// Login y logout
+Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+Route::post('/login', [AuthController::class, 'login'])->name('login.post');
+Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
+
+// ====================================
+// API PARA USUARIOS
+// ====================================
+
+Route::prefix('api')->group(function () {
+    Route::get('/user/current', [AuthController::class, 'currentUser']);
+    Route::get('/users/dropdown', [AuthController::class, 'getUsersForDropdown']);
 });
 
-// Authentication Routes
-Route::middleware('guest')->group(function () {
-    Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
-    Route::post('/login', [AuthenticatedSessionController::class, 'store']);
-    Route::get('/register', [RegisteredUserController::class, 'create'])->name('register');
-    Route::post('/register', [RegisteredUserController::class, 'store']);
-});
+// ====================================
+// RUTAS PROTEGIDAS (REQUIEREN AUTH)
+// ====================================
 
-Route::middleware('auth')->group(function () {
-    Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
-});
-
-// Protected Routes
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth'])->group(function () {
     
-    // Dashboard
+    // Dashboard principal
+    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    Route::get('/dashboard/estadisticas-ajax', [DashboardController::class, 'getEstadisticasAjax'])->name('dashboard.estadisticas-ajax');
     Route::get('/dashboard/mapa-estaciones', [DashboardController::class, 'getMapaEstaciones'])->name('dashboard.mapa-estaciones');
 
-    // Estaciones
-    Route::resource('estaciones', EstacionController::class);
-    Route::get('/estaciones/{estacion}/ficha-tecnica', [EstacionController::class, 'fichaTecnica'])->name('estaciones.ficha-tecnica');
-    Route::put('/estaciones/{estacion}/actualizar-estado', [EstacionController::class, 'actualizarEstado'])->name('estaciones.actualizar-estado');
-    Route::get('/mapa', [EstacionController::class, 'mapa'])->name('estaciones.mapa');
-    Route::get('/sectorizacion', [EstacionController::class, 'sectorizacion'])->name('estaciones.sectorizacion');
+    // ====================================
+    // RUTAS DE ESTACIONES
+    // ====================================
+    Route::get('/estaciones', [EstacionController::class, 'index'])->name('estaciones.index');
+    Route::get('/estaciones/create', [EstacionController::class, 'create'])->name('estaciones.create');
+    Route::post('/estaciones', [EstacionController::class, 'store'])->name('estaciones.store');
+    Route::get('/estaciones/{estacion}', [EstacionController::class, 'show'])->name('estaciones.show');
+    Route::get('/estaciones/{estacion}/edit', [EstacionController::class, 'edit'])->name('estaciones.edit');
+    Route::put('/estaciones/{estacion}', [EstacionController::class, 'update'])->name('estaciones.update');
+    Route::delete('/estaciones/{estacion}', [EstacionController::class, 'destroy'])->name('estaciones.destroy');
+    Route::get('/estaciones/{estacion}/incidencias', [IncidenciaAjaxController::class, 'getIncidenciasPorEstacion'])
+    ->name('estaciones.incidencias');
 
-    // Incidencias
-    Route::resource('incidencias', IncidenciaController::class);
-    Route::put('/incidencias/{incidencia}/asignar', [IncidenciaController::class, 'asignar'])->name('incidencias.asignar');
-    Route::put('/incidencias/{incidencia}/resolver', [IncidenciaController::class, 'resolver'])->name('incidencias.resolver');
-    Route::put('/incidencias/{incidencia}/cerrar', [IncidenciaController::class, 'cerrar'])->name('incidencias.cerrar');
-    Route::post('/incidencias/{incidencia}/seguimiento', [IncidenciaController::class, 'agregarSeguimiento'])->name('incidencias.seguimiento');
+    // ====================================
+    // RUTAS DE INCIDENCIAS
+    // ====================================
+    Route::get('/incidencias', [IncidenciaController::class, 'index'])->name('incidencias.index');
+    Route::get('/incidencias/create', [IncidenciaController::class, 'create'])->name('incidencias.create');
+    Route::post('/incidencias', [IncidenciaController::class, 'store'])->name('incidencias.store');
+    Route::get('/incidencias/{incidencia}', [IncidenciaController::class, 'show'])->name('incidencias.show');
+    Route::get('/incidencias/{incidencia}/edit', [IncidenciaController::class, 'edit'])->name('incidencias.edit');
+    Route::put('/incidencias/{incidencia}', [IncidenciaController::class, 'update'])->name('incidencias.update');
+    Route::delete('/incidencias/{incidencia}', [IncidenciaController::class, 'destroy'])->name('incidencias.destroy');
+    
+    // AJAX para cambiar estado de incidencias
+    Route::post('/incidencias/{incidencia}/cambiar-estado', [IncidenciaController::class, 'cambiarEstado'])->name('incidencias.cambiar-estado');
 
-    // Trámites MTC
-    Route::resource('tramites', TramiteMtcController::class);
-    Route::put('/tramites/{tramiteMtc}/aprobar', [TramiteMtcController::class, 'aprobar'])->name('tramites.aprobar');
-    Route::put('/tramites/{tramiteMtc}/rechazar', [TramiteMtcController::class, 'rechazar'])->name('tramites.rechazar');
-    Route::put('/tramites/{tramiteMtc}/actualizar-estado', [TramiteMtcController::class, 'actualizarEstado'])->name('tramites.actualizar-estado');
+    // ====================================
+    // RUTAS DE TRÁMITES MTC
+    // ====================================
+    // Route::get('/tramites-mtc', [TramiteMtcController::class, 'index'])->name('tramites.index');
+    // Route::get('/tramites-mtc/create', [TramiteMtcController::class, 'create'])->name('tramites.create');
+    // Route::post('/tramites-mtc', [TramiteMtcController::class, 'store'])->name('tramites.store');
+    // Route::get('/tramites-mtc/{tramite}', [TramiteMtcController::class, 'show'])->name('tramites.show');
 
-    // Archivos y Digitalización
-    Route::resource('archivos', ArchivoController::class);
-    Route::get('/archivos/upload', [ArchivoController::class, 'uploadForm'])->name('archivos.upload');
-    Route::post('/archivos/upload-multiple', [ArchivoController::class, 'uploadMultiple'])->name('archivos.upload-multiple');
-    Route::get('/archivos/{archivo}/descargar', [ArchivoController::class, 'descargar'])->name('archivos.descargar');
-    Route::get('/archivos/{archivo}/ver', [ArchivoController::class, 'ver'])->name('archivos.ver');
+    // ====================================
+    // RUTAS DE TRÁMITES MTC
+    // ====================================
+    Route::get('/tramites-mtc', [TramiteMtcController::class, 'index'])->name('tramites.index');
+    Route::get('/tramites-mtc/create', [TramiteMtcController::class, 'create'])->name('tramites.create');
+    Route::post('/tramites-mtc', [TramiteMtcController::class, 'store'])->name('tramites.store');
+    Route::get('/tramites-mtc/{tramite}', [TramiteMtcController::class, 'show'])->name('tramites.show');
+    Route::get('/tramites-mtc/{tramite}/edit', [TramiteMtcController::class, 'edit'])->name('tramites.edit');
+    Route::put('/tramites-mtc/{tramite}', [TramiteMtcController::class, 'update'])->name('tramites.update');
+    Route::delete('/tramites-mtc/{tramite}', [TramiteMtcController::class, 'destroy'])->name('tramites.destroy');
 
-    // Carpetas
-    Route::resource('carpetas', CarpetaController::class);
-    Route::post('/carpetas/{carpeta}/crear-estructura', [CarpetaController::class, 'crearEstructura'])->name('carpetas.crear-estructura');
+    // AJAX para trámites MTC
+    // Route::post('/tramites-mtc/{tramite}/cambiar-estado', [TramiteMtcController::class, 'cambiarEstado'])->name('tramites.cambiar-estado');
+    // Route::post('/tramites-mtc/{tramite}/toggle-documento', [TramiteMtcController::class, 'toggleDocumento'])->name('tramites.toggle-documento');
+    // Route::get('/tramites-mtc/tipo-info/get', [TramiteMtcController::class, 'getTipoInfo'])->name('tramites.tipo-info');
 
-    // Informes y Estadísticas
-    Route::prefix('informes')->name('informes.')->group(function () {
-        Route::get('/economicos', function () { return view('informes.economicos'); })->name('economicos');
-        Route::get('/tecnicos', function () { return view('informes.tecnicos'); })->name('tecnicos');
-        Route::get('/estadisticas', function () { return view('informes.estadisticas'); })->name('estadisticas');
-    });
+    // AJAX para trámites MTC
+    Route::post('/tramites-mtc/{tramite}/cambiar-estado', [TramiteMtcController::class, 'cambiarEstado'])->name('tramites.cambiar-estado');
+    Route::post('/tramites-mtc/{tramite}/toggle-documento', [TramiteMtcController::class, 'toggleDocumento'])->name('tramites.toggle-documento');
+    Route::get('/tramites-mtc/tipo-info/get', [TramiteMtcController::class, 'getTipoInfo'])->name('tramites.tipo-info');
 
-    // Administración (solo para administradores)
-    Route::middleware(['role:administrador'])->prefix('admin')->name('admin.')->group(function () {
-        Route::get('/usuarios', [UserController::class, 'index'])->name('usuarios');
-        Route::get('/configuracion', function () { return view('admin.configuracion'); })->name('configuracion');
-        Route::get('/logs', function () { return view('admin.logs'); })->name('logs');
-    });
+    // Exportación de trámites
+    Route::get('/tramites-mtc/exportar/excel', [TramiteMtcController::class, 'exportarExcel'])->name('tramites.exportar.excel');
+    Route::get('/tramites-mtc/exportar/pdf', [TramiteMtcController::class, 'exportarPdf'])->name('tramites.exportar.pdf');
 
-    // API Routes para AJAX
-    Route::prefix('api')->name('api.')->group(function () {
-        Route::get('/estaciones/{estacion}/incidencias', [EstacionController::class, 'getIncidencias'])->name('estaciones.incidencias');
-        Route::get('/estaciones/{estacion}/tramites', [EstacionController::class, 'getTramites'])->name('estaciones.tramites');
-        Route::get('/estaciones/{estacion}/archivos', [EstacionController::class, 'getArchivos'])->name('estaciones.archivos');
-        
-        // Búsqueda y filtros
-        Route::get('/search/estaciones', [EstacionController::class, 'searchApi'])->name('search.estaciones');
-        Route::get('/search/incidencias', [IncidenciaController::class, 'searchApi'])->name('search.incidencias');
-        Route::get('/search/tramites', [TramiteMtcController::class, 'searchApi'])->name('search.tramites');
-    });
+    // ====================================
+    // RUTAS DE DIGITALIZACIÓN (ARCHIVOS)
+    // ====================================
+    Route::get('/digitalizacion', [ArchivoController::class, 'index'])->name('digitalizacion.index');
+    Route::get('/digitalizacion/upload', [ArchivoController::class, 'create'])->name('digitalizacion.create');
+    Route::post('/digitalizacion', [ArchivoController::class, 'store'])->name('digitalizacion.store');
+
+    // ====================================
+    // AJAX PARA DASHBOARD
+    // ====================================
+    Route::get('/dashboard/mapa-estaciones', [DashboardController::class, 'getMapaEstaciones']);
+    Route::get('/dashboard/estadisticas', [DashboardController::class, 'getEstadisticasAjax']);
 });
 
-// Fallback route
-Route::fallback(function () {
+// ====================================
+// RUTAS FALLBACK
+// ====================================
+
+// Redireccionar rutas de autenticación que Laravel espera
+Route::get('/home', function () {
     return redirect()->route('dashboard');
+});
+
+// Fallback para rutas no encontradas (opcional)
+Route::fallback(function () {
+    if (auth()->check()) {
+        return redirect()->route('dashboard')->with('error', 'Página no encontrada. Redirigido al dashboard.');
+    } else {
+        return redirect()->route('login')->with('error', 'Página no encontrada. Por favor, inicia sesión.');
+    }
 });
