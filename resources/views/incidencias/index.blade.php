@@ -216,18 +216,20 @@
                                     <strong>{{ $incidencia->estacion->codigo ?? 'N/A' }}</strong><br>
                                     <small class="text-muted">{{ Str::limit($incidencia->estacion->razon_social ?? 'N/A', 30) }}</small>
                                 </td>
+                                
                                 <td>
                                     <strong>{{ $incidencia->titulo }}</strong><br>
                                     <small class="text-muted">{{ Str::limit($incidencia->descripcion, 80) }}</small>
                                 </td>
                                 <td>
                                     @php
-                                        $prioridadValue = $incidencia->prioridad->value;
+                                        // ✅ CORREGIDO: Usar el accessor que maneja tanto enum como string
+                                        $prioridadValue = $incidencia->prioridad_value;
                                         $prioridadConfig = [
                                             'critica' => ['class' => 'danger', 'label' => 'CRÍTICA'],
-                                            'alta' => ['class' => 'danger', 'label' => 'ALTA'],
-                                            'media' => ['class' => 'warning', 'label' => 'MEDIA'],
-                                            'baja' => ['class' => 'info', 'label' => 'BAJA'],
+                                            'alta' => ['class' => 'warning', 'label' => 'ALTA'],
+                                            'media' => ['class' => 'info', 'label' => 'MEDIA'],
+                                            'baja' => ['class' => 'success', 'label' => 'BAJA'],
                                         ];
                                         $config = $prioridadConfig[$prioridadValue] ?? ['class' => 'secondary', 'label' => strtoupper($prioridadValue)];
                                     @endphp
@@ -235,9 +237,10 @@
                                 </td>
                                 <td>
                                     @php
-                                        $estadoValue = $incidencia->estado->value;
+                                        // ✅ CORREGIDO: Usar el accessor que maneja tanto enum como string
+                                        $estadoValue = $incidencia->estado_value;
                                         $estadoConfig = [
-                                            'abierta' => ['class' => 'info', 'label' => 'ABIERTA'],
+                                            'abierta' => ['class' => 'primary', 'label' => 'ABIERTA'],
                                             'en_proceso' => ['class' => 'warning', 'label' => 'EN PROCESO'],
                                             'resuelta' => ['class' => 'success', 'label' => 'RESUELTA'],
                                             'cerrada' => ['class' => 'secondary', 'label' => 'CERRADA'],
@@ -247,12 +250,13 @@
                                     @endphp
                                     <span class="badge bg-{{ $config['class'] }}">{{ $config['label'] }}</span>
                                 </td>
+                                
                                 <td>
                                     @if($incidencia->reportadoPor)
                                         <strong>{{ $incidencia->reportadoPor->name }}</strong><br>
                                         <small class="text-muted">
                                             <i class="fas fa-user-tag me-1"></i>
-                                            {{ ucfirst(str_replace('_', ' ', $incidencia->reportadoPor->rol->value)) }}
+                                            {{ is_string($incidencia->prioridad) ? $incidencia->prioridad : $incidencia->prioridad->value }}
                                         </small>
                                     @else
                                         <span class="text-muted">No especificado</span>
@@ -263,7 +267,7 @@
                                         <strong>{{ $incidencia->asignadoA->name }}</strong><br>
                                         <small class="text-muted">
                                             <i class="fas fa-user-cog me-1"></i>
-                                            {{ ucfirst(str_replace('_', ' ', $incidencia->asignadoA->rol->value)) }}
+                                            {{ is_string($incidencia->asignadoA->rol) ? $incidencia->asignadoA->rol : $incidencia->asignadoA->rol->value }}
                                         </small>
                                     @else
                                         <span class="text-muted"><i>Sin asignar</i></span>
@@ -275,18 +279,25 @@
                                 </td>
                                 <td>
                                     @php
-                                        $horasTranscurridas = $incidencia->fecha_reporte->diffInHours(now());
-                                        $diasTranscurridos = $incidencia->fecha_reporte->diffInDays(now());
+                                        // Diferencia en segundos entre ahora y la fecha de reporte
+                                        $segundos = time() - $incidencia->fecha_reporte->getTimestamp();
+
+                                        // Horas y días como enteros
+                                        $horasTranscurridas = intdiv($segundos, 3600);       // 0, 1, 2, 3...
+                                        $diasTranscurridos  = intdiv($horasTranscurridas, 24); // 0, 1, 2...
                                     @endphp
-                                    
-                                    @if($horasTranscurridas > 48)
+
+                                    @if ($diasTranscurridos >= 2)
                                         <span class="badge bg-danger">{{ $diasTranscurridos }} días</span>
-                                    @elseif($horasTranscurridas > 24)
+                                    @elseif ($horasTranscurridas >= 24)
                                         <span class="badge bg-warning">{{ $horasTranscurridas }} horas</span>
-                                    @else
+                                    @elseif ($horasTranscurridas >= 1)
                                         <span class="badge bg-info">{{ $horasTranscurridas }}h</span>
+                                    @else
+                                        <span class="badge bg-info">&lt; 1h</span>
                                     @endif
                                 </td>
+
                                 <td>
                                     <div class="btn-group" role="group">
                                         <!-- Ver -->
@@ -297,7 +308,7 @@
                                         </a>
                                         
                                         <!-- Editar -->
-                                        @if($incidencia->estado->value !== 'cerrada' || in_array(auth()->user()->rol, ['administrador', 'gerente']))
+                                        @if($incidencia->estado !== 'cerrada' || in_array(auth()->user()->rol, ['administrador', 'gerente']))
                                             <a href="{{ route('incidencias.edit', $incidencia) }}" 
                                             class="btn btn-warning btn-sm" 
                                             data-toggle="tooltip" title="Editar">

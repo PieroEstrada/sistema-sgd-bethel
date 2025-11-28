@@ -69,7 +69,7 @@ class DashboardController extends Controller
 
         // Estaciones con mayor actividad (incidencias)
         $estacionesActividad = Estacion::withCount(['incidencias' => function($query) {
-                $query->where('created_at', '>=', now()->subDays(30));
+                $query->where('fecha_reporte', '>=', now()->subDays(30));
             }])
             ->orderBy('incidencias_count', 'desc')
             ->limit(10)
@@ -79,8 +79,8 @@ class DashboardController extends Controller
         $incidenciasPorMes = [];
         for ($i = 5; $i >= 0; $i--) {
             $fecha = now()->subMonths($i);
-            $count = Incidencia::whereYear('created_at', $fecha->year)
-                              ->whereMonth('created_at', $fecha->month)
+            $count = Incidencia::whereYear('fecha_reporte', $fecha->year)
+                              ->whereMonth('fecha_reporte', $fecha->month)
                               ->count();
             $incidenciasPorMes[] = [
                 'mes' => $fecha->format('M Y'),
@@ -193,7 +193,7 @@ class DashboardController extends Controller
         $fechaInicio = now()->subDays((int)$periodo);
 
         $data = [
-            'incidencias_nuevas' => Incidencia::where('created_at', '>=', $fechaInicio)->count(),
+            'incidencias_nuevas' => Incidencia::where('fecha_reporte', '>=', $fechaInicio)->count(),
             'tramites_nuevos' => TramiteMtc::where('created_at', '>=', $fechaInicio)->count(),
             'archivos_subidos' => Archivo::where('created_at', '>=', $fechaInicio)->count()
         ];
