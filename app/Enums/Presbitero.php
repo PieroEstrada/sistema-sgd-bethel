@@ -103,7 +103,6 @@ class Presbitero extends Model
             'NORTE' => 'PN',
             'CENTRO' => 'PC', 
             'SUR' => 'PS',
-            'ORIENTE' => 'PO',
             default => 'PG'
         };
 

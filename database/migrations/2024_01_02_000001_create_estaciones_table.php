@@ -21,7 +21,7 @@ return new class extends Migration
             $table->integer('presbyter_id')->nullable();
             $table->enum('estado', ['A.A', 'F.A', 'N.I', 'MANT'])->default('N.I');
             $table->integer('potencia_watts');
-            $table->enum('sector', ['NORTE', 'CENTRO', 'SUR', 'ORIENTE']);
+            $table->enum('sector', ['NORTE', 'CENTRO', 'SUR']);
             $table->decimal('latitud', 10, 6)->nullable();
             $table->decimal('longitud', 10, 6)->nullable();
             $table->foreignId('jefe_estacion_id')->nullable()->constrained('users');

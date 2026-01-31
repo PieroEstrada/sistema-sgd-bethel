@@ -14,6 +14,7 @@ class User extends Authenticatable
 
     /**
      * The attributes that are mass assignable.
+     * ✅ FUSIÓN: Mantener campos originales + agregar nuevos
      */
     protected $fillable = [
         'name',
@@ -21,10 +22,12 @@ class User extends Authenticatable
         'password',
         'rol',
         'sector_asignado',
-        'estaciones_asignadas',
+        'estaciones_asignadas',    // ✅ MANTENER - Para jefes de estación
         'telefono',
         'activo',
         'ultimo_acceso',
+        'area_especialidad',       // ✅ NUEVO CAMPO
+        'nivel_acceso',           // ✅ NUEVO CAMPO
     ];
 
     /**
@@ -37,6 +40,7 @@ class User extends Authenticatable
 
     /**
      * Get the attributes that should be cast.
+     * ✅ FUSIÓN: Mantener casts existentes + agregar rol como enum
      */
     protected function casts(): array
     {
@@ -45,12 +49,13 @@ class User extends Authenticatable
             'ultimo_acceso' => 'datetime',
             'password' => 'hashed',
             'activo' => 'boolean',
-            'estaciones_asignadas' => 'array',
+            'estaciones_asignadas' => 'array',  // ✅ MANTENER
+            'rol' => RolUsuario::class,         // ✅ NUEVO CAST
         ];
     }
 
     // ==========================================
-    // RELACIONES
+    // RELACIONES (MANTENER LAS TUYAS)
     // ==========================================
 
     /**
@@ -78,19 +83,24 @@ class User extends Authenticatable
     }
 
     // ==========================================
-    // ACCESSORS Y MUTATORS
+    // ACCESSORS Y MUTATORS (MANTENER + MEJORAR)
     // ==========================================
 
     /**
-     * Obtener el rol como enum
+     * ✅ MANTENER - Obtener el rol como enum
      */
     public function getRolEnumAttribute(): RolUsuario
     {
-        return RolUsuario::from($this->rol);
+        try {
+            return RolUsuario::from($this->rol);
+        } catch (\ValueError $e) {
+            // Fallback para roles legacy
+            return RolUsuario::VISOR;
+        }
     }
 
     /**
-     * Obtener el sector asignado como enum
+     * ✅ MANTENER - Obtener el sector asignado como enum
      */
     public function getSectorEnumAttribute(): ?Sector
     {
@@ -98,19 +108,27 @@ class User extends Authenticatable
     }
 
     /**
-     * Obtener rol formateado
+     * ✅ MANTENER - Obtener rol formateado
      */
     public function getRolFormateadoAttribute(): string
     {
-        return $this->rolEnum->getLabel();
+        try {
+            return $this->rolEnum->getDisplayName();
+        } catch (\Exception $e) {
+            return ucfirst(str_replace('_', ' ', $this->rol));
+        }
     }
 
     /**
-     * Obtener color del rol
+     * ✅ MANTENER - Obtener color del rol
      */
     public function getRolColorAttribute(): string
     {
-        return $this->rolEnum->getColor();
+        try {
+            return $this->rolEnum->getBadgeClass();
+        } catch (\Exception $e) {
+            return 'bg-secondary';
+        }
     }
 
     /**
@@ -118,11 +136,57 @@ class User extends Authenticatable
      */
     public function getRolIconoAttribute(): string
     {
-        return $this->rolEnum->getIcon();
+        $rol = $this->rol instanceof RolUsuario ? $this->rol->value : $this->rol;
+
+        return match($rol) {
+            'administrador' => 'fas fa-user-shield',
+            'sectorista' => 'fas fa-map-marker-alt',
+            'encargado_ingenieria' => 'fas fa-cogs',
+            'encargado_laboratorio' => 'fas fa-flask',
+            'encargado_logistico' => 'fas fa-truck',
+            'coordinador_operaciones' => 'fas fa-tasks',
+            'asistente_contable' => 'fas fa-calculator',
+            'gestor_radiodifusion' => 'fas fa-broadcast-tower',
+            'visor' => 'fas fa-eye',
+            default => 'fas fa-user'
+        };
+    }
+
+    /**
+     * ✅ NUEVO - Área de especialidad formateada
+     */
+    public function getAreaDisplayNameAttribute(): ?string
+    {
+        if (!$this->area_especialidad) return null;
+
+        return match($this->area_especialidad) {
+            'ingenieria' => 'Ingeniería',
+            'laboratorio' => 'Laboratorio',
+            'logistica' => 'Logística',
+            'operaciones' => 'Operaciones',
+            'documentacion' => 'Documentación',
+            'contabilidad' => 'Contabilidad',
+            'radiodifusion' => 'Radiodifusión',
+            default => ucfirst($this->area_especialidad)
+        };
+    }
+
+    /**
+     * ✅ NUEVO - Nivel de acceso formateado
+     */
+    public function getNivelAccesoDisplayNameAttribute(): string
+    {
+        return match($this->nivel_acceso) {
+            'total' => 'Acceso Total',
+            'sectorial' => 'Acceso Sectorial',
+            'limitado' => 'Acceso Limitado',
+            'solo_lectura' => 'Solo Lectura',
+            default => 'No Definido'
+        };
     }
 
     // ==========================================
-    // MÉTODOS DE PERMISOS
+    // MÉTODOS DE PERMISOS (MANTENER + ACTUALIZAR)
     // ==========================================
 
     /**
@@ -130,80 +194,111 @@ class User extends Authenticatable
      */
     public function tienePermiso(string $permiso): bool
     {
-        return $this->rolEnum->puedeAcceder($permiso);
+        $rol = $this->rol instanceof RolUsuario ? $this->rol->value : $this->rol;
+
+        return match($permiso) {
+            'gestionar_incidencias_todas' => in_array($rol, ['administrador', 'coordinador_operaciones']),
+            'gestionar_estaciones_todas' => in_array($rol, ['administrador', 'coordinador_operaciones']),
+            'gestionar_usuarios' => $rol === 'administrador',
+            'gestionar_tramites_mtc' => in_array($rol, ['administrador', 'gestor_radiodifusion']),
+            'editar_incidencias_tecnico' => in_array($rol, ['administrador', 'coordinador_operaciones', 'encargado_ingenieria', 'encargado_laboratorio']),
+            default => false
+        };
     }
 
     /**
      * Verificar si puede modificar una estación específica
+     * - administrador y coordinador_operaciones: todas
+     * - sectorista: solo estaciones de su sector
      */
     public function puedeModificarEstacion(Estacion $estacion): bool
     {
-        return $this->rolEnum->puedeModificarEstacion($estacion, $this);
+        $rol = $this->rol instanceof RolUsuario ? $this->rol->value : $this->rol;
+
+        // Administrador y coordinador_operaciones pueden modificar todas
+        if (in_array($rol, ['administrador', 'coordinador_operaciones'])) {
+            return true;
+        }
+
+        // Sectorista solo puede modificar estaciones de su sector
+        if ($rol === 'sectorista' && $this->sector_asignado) {
+            $estacionSector = $estacion->sector instanceof \App\Enums\Sector
+                ? $estacion->sector->value
+                : $estacion->sector;
+            return $estacionSector === $this->sector_asignado;
+        }
+
+        return false;
     }
 
     /**
      * Verificar si puede ver una estación específica
+     * Todos los roles autenticados pueden ver estaciones
+     * Sectorista: filtrado por sector
      */
     public function puedeVerEstacion(Estacion $estacion): bool
     {
-        // Todos pueden ver estaciones (según requerimientos)
-        if ($this->rolEnum->puedeVerEstaciones()) {
-            return true;
+        $rol = $this->rol instanceof RolUsuario ? $this->rol->value : $this->rol;
+
+        // Sectorista solo ve estaciones de su sector
+        if ($rol === 'sectorista' && $this->sector_asignado) {
+            $estacionSector = $estacion->sector instanceof \App\Enums\Sector
+                ? $estacion->sector->value
+                : $estacion->sector;
+            return $estacionSector === $this->sector_asignado;
         }
 
-        // Jefe de estación solo ve las suyas
-        if ($this->rol === 'jefe_estacion') {
-            return in_array($estacion->id, $this->estaciones_asignadas ?? []);
-        }
-
-        return false;
+        // Todos los demás roles pueden ver todas las estaciones
+        return true;
     }
 
     /**
-     * Verificar si puede gestionar incidencias de una estación
+     * Verificar si puede gestionar (crear/editar) incidencias
+     * - administrador y coordinador_operaciones: global
+     * - sectorista: solo su sector
+     * - encargado_ingenieria y encargado_laboratorio: edición técnica
+     * - encargado_logistico, asistente_contable, gestor_radiodifusion, visor: solo lectura
      */
     public function puedeGestionarIncidencia(Incidencia $incidencia): bool
     {
-        // Admin y gerente pueden todo
-        if ($this->tienePermiso('gestionar_incidencias_todas')) {
+        $rol = $this->rol instanceof RolUsuario ? $this->rol->value : $this->rol;
+
+        // Admin y coordinador_operaciones pueden todo
+        if (in_array($rol, ['administrador', 'coordinador_operaciones'])) {
+            return true;
+        }
+
+        // Roles técnicos pueden editar campos técnicos
+        if (in_array($rol, ['encargado_ingenieria', 'encargado_laboratorio'])) {
             return true;
         }
 
         // Sectorista solo de su sector
-        if ($this->rol === 'sectorista' && $this->sector_asignado) {
-            return $incidencia->estacion->sector->value === $this->sector_asignado;
+        if ($rol === 'sectorista' && $this->sector_asignado) {
+            $estacionSector = $incidencia->estacion->sector instanceof \App\Enums\Sector
+                ? $incidencia->estacion->sector->value
+                : $incidencia->estacion->sector;
+            return $estacionSector === $this->sector_asignado;
         }
 
-        // Jefe de estación solo de sus estaciones
-        if ($this->rol === 'jefe_estacion') {
-            return in_array($incidencia->estacion_id, $this->estaciones_asignadas ?? []);
-        }
-
-        // Operador solo puede reportar, no gestionar
+        // Roles de solo lectura no pueden gestionar
         return false;
     }
 
     /**
-     * Obtener estaciones que puede gestionar
+     * Obtener estaciones que puede gestionar (CRUD)
+     * Solo: administrador y coordinador_operaciones
      */
     public function getEstacionesGestionables()
     {
-        // Admin y gerente: todas
-        if ($this->tienePermiso('gestionar_estaciones_todas')) {
+        $rol = $this->rol instanceof RolUsuario ? $this->rol->value : $this->rol;
+
+        // Solo admin y coordinador_operaciones pueden gestionar estaciones
+        if (in_array($rol, ['administrador', 'coordinador_operaciones'])) {
             return Estacion::all();
         }
 
-        // Sectorista: solo de su sector
-        if ($this->rol === 'sectorista' && $this->sector_asignado) {
-            return Estacion::where('sector', $this->sector_asignado)->get();
-        }
-
-        // Jefe de estación: solo asignadas
-        if ($this->rol === 'jefe_estacion' && $this->estaciones_asignadas) {
-            return Estacion::whereIn('id', $this->estaciones_asignadas)->get();
-        }
-
-        return collect(); // Vacío para operadores y consulta
+        return collect(); // Vacío para roles sin permiso de gestión
     }
 
     /**
@@ -211,31 +306,32 @@ class User extends Authenticatable
      */
     public function getIncidenciasGestionables()
     {
+        $rol = $this->rol instanceof RolUsuario ? $this->rol->value : $this->rol;
         $query = Incidencia::query();
 
-        // Admin y gerente: todas
-        if ($this->tienePermiso('gestionar_incidencias_todas')) {
+        // Admin y coordinador_operaciones: todas
+        if (in_array($rol, ['administrador', 'coordinador_operaciones'])) {
+            return $query;
+        }
+
+        // Roles técnicos: todas (para edición técnica)
+        if (in_array($rol, ['encargado_ingenieria', 'encargado_laboratorio'])) {
             return $query;
         }
 
         // Sectorista: solo de su sector
-        if ($this->rol === 'sectorista' && $this->sector_asignado) {
+        if ($rol === 'sectorista' && $this->sector_asignado) {
             return $query->whereHas('estacion', function($q) {
                 $q->where('sector', $this->sector_asignado);
             });
         }
 
-        // Jefe de estación: solo de sus estaciones
-        if ($this->rol === 'jefe_estacion' && $this->estaciones_asignadas) {
-            return $query->whereIn('estacion_id', $this->estaciones_asignadas);
-        }
-
-        // Operador y consulta: solo las que reportó
-        return $query->where('reportado_por_user_id', $this->id);
+        // Roles de solo lectura: pueden ver todas pero no gestionar
+        return $query;
     }
 
     // ==========================================
-    // SCOPES
+    // SCOPES (MANTENER + AGREGAR NUEVOS)
     // ==========================================
 
     /**
@@ -263,11 +359,11 @@ class User extends Authenticatable
     }
 
     /**
-     * Usuarios administrativos
+     * ✅ ACTUALIZAR - Usuarios administrativos
      */
     public function scopeAdministrativos($query)
     {
-        return $query->whereIn('rol', ['administrador', 'gerente']);
+        return $query->whereIn('rol', ['administrador']);
     }
 
     /**
@@ -275,15 +371,37 @@ class User extends Authenticatable
      */
     public function scopeTecnicos($query)
     {
-        return $query->whereIn('rol', ['sectorista', 'jefe_estacion', 'operador']);
+        return $query->whereIn('rol', [
+            'sectorista',
+            'encargado_ingenieria',
+            'encargado_laboratorio',
+            'coordinador_operaciones',
+            'encargado_logistico'
+        ]);
+    }
+
+    /**
+     * ✅ NUEVO - Usuarios por área de especialidad
+     */
+    public function scopePorArea($query, string $area)
+    {
+        return $query->where('area_especialidad', $area);
+    }
+
+    /**
+     * ✅ NUEVO - Usuarios con nivel de acceso específico
+     */
+    public function scopePorNivelAcceso($query, string $nivel)
+    {
+        return $query->where('nivel_acceso', $nivel);
     }
 
     // ==========================================
-    // MÉTODOS ESTÁTICOS
+    // MÉTODOS ESTÁTICOS (MANTENER + NUEVOS)
     // ==========================================
 
     /**
-     * Crear sectorista
+     * ✅ MANTENER - Crear sectorista
      */
     public static function crearSectorista(array $datos, string $sector): self
     {
@@ -291,29 +409,52 @@ class User extends Authenticatable
             ...$datos,
             'rol' => 'sectorista',
             'sector_asignado' => $sector,
+            'nivel_acceso' => 'sectorial',
             'activo' => true
         ]);
     }
 
     /**
-     * Crear jefe de estación
+     * Crear coordinador de operaciones (reemplaza a jefe de estación)
      */
-    public static function crearJefeEstacion(array $datos, array $estacionesIds): self
+    public static function crearCoordinadorOperaciones(array $datos): self
     {
         return self::create([
             ...$datos,
-            'rol' => 'jefe_estacion',
-            'estaciones_asignadas' => $estacionesIds,
+            'rol' => 'coordinador_operaciones',
+            'area_especialidad' => 'operaciones',
+            'nivel_acceso' => 'limitado',
+            'activo' => true
+        ]);
+    }
+
+    /**
+     * ✅ NUEVO - Crear usuario con nuevo rol
+     */
+    public static function crearConNuevoRol(array $datos, string $rol, ?string $area = null): self
+    {
+        $nivelAcceso = match($rol) {
+            'administrador' => 'total',
+            'sectorista' => 'sectorial',
+            'visor' => 'solo_lectura',
+            default => 'limitado'
+        };
+
+        return self::create([
+            ...$datos,
+            'rol' => $rol,
+            'area_especialidad' => $area,
+            'nivel_acceso' => $nivelAcceso,
             'activo' => true
         ]);
     }
 
     // ==========================================
-    // MÉTODOS DE ASIGNACIÓN
+    // MÉTODOS DE ASIGNACIÓN (MANTENER)
     // ==========================================
 
     /**
-     * Asignar sector a sectorista
+     * ✅ MANTENER - Asignar sector a sectorista
      */
     public function asignarSector(string $sector): bool
     {
@@ -326,7 +467,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Asignar estaciones a jefe
+     * ✅ MANTENER - Asignar estaciones a jefe
      */
     public function asignarEstaciones(array $estacionesIds): bool
     {
@@ -339,7 +480,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Verificar si tiene estaciones asignadas
+     * ✅ MANTENER - Verificar si tiene estaciones asignadas
      */
     public function tieneEstacionesAsignadas(): bool
     {
@@ -347,7 +488,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Verificar si tiene sector asignado
+     * ✅ MANTENER - Verificar si tiene sector asignado
      */
     public function tieneSectorAsignado(): bool
     {
@@ -355,11 +496,69 @@ class User extends Authenticatable
     }
 
     // ==========================================
-    // MÉTODOS PARA AUDITORÍA
+    // NUEVOS MÉTODOS PARA NUEVOS ROLES
     // ==========================================
 
     /**
-     * Registrar último acceso
+     * ✅ NUEVO - Verificar si es administrador
+     */
+    public function esAdministrador(): bool
+    {
+        return $this->rol === 'administrador';
+    }
+
+    /**
+     * ✅ NUEVO - Verificar si es sectorista
+     */
+    public function esSectorista(): bool
+    {
+        $rol = $this->rol instanceof RolUsuario ? $this->rol->value : $this->rol;
+        return in_array($rol, ['sectorista_norte', 'sectorista_centro', 'sectorista_sur', 'sectorista']);
+    }
+
+    /**
+     * ✅ NUEVO - Verificar si es gerente
+     */
+    public function esGerente(): bool
+    {
+        $rol = $this->rol instanceof RolUsuario ? $this->rol->value : $this->rol;
+        return $rol === 'gerente';
+    }
+
+    /**
+     * ✅ NUEVO - Verificar si es jefe de estación
+     */
+    public function esJefeEstacion(): bool
+    {
+        $rol = $this->rol instanceof RolUsuario ? $this->rol->value : $this->rol;
+        return $rol === 'jefe_estacion';
+    }
+
+    /**
+     * ✅ NUEVO - Verificar si puede gestionar trámites MTC
+     */
+    public function puedeGestionarTramitesMTC(): bool
+    {
+        return in_array($this->rol, ['administrador', 'gestor_radiodifusion']);
+    }
+
+    /**
+     * Verificar si es solo lectura
+     */
+    public function esSoloLectura(): bool
+    {
+        $rol = $this->rol instanceof RolUsuario ? $this->rol->value : $this->rol;
+
+        return $this->nivel_acceso === 'solo_lectura' ||
+               in_array($rol, ['visor', 'asistente_contable', 'encargado_logistico']);
+    }
+
+    // ==========================================
+    // MÉTODOS PARA AUDITORÍA (MANTENER)
+    // ==========================================
+
+    /**
+     * ✅ MANTENER - Registrar último acceso
      */
     public function registrarAcceso(): void
     {
@@ -367,7 +566,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Obtener resumen de actividad
+     * ✅ MANTENER - Obtener resumen de actividad
      */
     public function getResumenActividad(): array
     {
@@ -377,6 +576,51 @@ class User extends Authenticatable
             'incidencias_abiertas' => $this->incidenciasAsignadas()->whereIn('estado', ['abierta', 'en_proceso'])->count(),
             'ultimo_acceso' => $this->ultimo_acceso?->diffForHumans(),
             'estaciones_gestionables' => $this->getEstacionesGestionables()->count(),
+            'rol_formateado' => $this->rol_formateado,
+            'nivel_acceso' => $this->nivel_acceso_display_name,
+            'area_especialidad' => $this->area_display_name,
         ];
+    }
+
+    // ==========================================
+    // BOOT METHOD PARA AUTO-ASIGNACIONES
+    // ==========================================
+
+    /**
+     * Eventos automáticos al guardar
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Auto-asignar área y nivel según el rol
+        static::saving(function ($user) {
+            $rol = $user->rol instanceof RolUsuario ? $user->rol->value : $user->rol;
+
+            if ($user->isDirty('rol')) {
+                // Auto-asignar área de especialidad
+                if (!$user->area_especialidad) {
+                    $user->area_especialidad = match($rol) {
+                        'encargado_ingenieria' => 'ingenieria',
+                        'encargado_laboratorio' => 'laboratorio',
+                        'encargado_logistico' => 'logistica',
+                        'coordinador_operaciones' => 'operaciones',
+                        'asistente_contable' => 'contabilidad',
+                        'gestor_radiodifusion' => 'radiodifusion',
+                        default => $user->area_especialidad
+                    };
+                }
+
+                // Auto-asignar nivel de acceso
+                if (!$user->nivel_acceso) {
+                    $user->nivel_acceso = match($rol) {
+                        'administrador' => 'total',
+                        'sectorista' => 'sectorial',
+                        'visor' => 'solo_lectura',
+                        default => 'limitado'
+                    };
+                }
+            }
+        });
     }
 }

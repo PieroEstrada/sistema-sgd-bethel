@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php artisan:*)",
+      "Bash(composer show:*)",
+      "Bash(composer require:*)",
+      "Bash(php:*)",
+      "Bash(findstr:*)",
+      "Bash(dir C:xamppphpext*zip*.dll)",
+      "Bash(cmd /c \"dir C:\\\\xampp\\\\php\\\\ext\\\\*zip*.dll\")",
+      "Bash(ls:*)",
+      "Bash(mysql:*)",
+      "Bash(dir:*)",
+      "Bash(test:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run build:*)",
+      "Bash(composer update:*)",
+      "Bash(composer dump-autoload:*)"
+    ]
+  }
+}

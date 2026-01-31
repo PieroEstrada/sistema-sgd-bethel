@@ -79,19 +79,6 @@ class PresbiteroSeeder extends Seeder
                 'fecha_ordenacion' => '2019-02-18',
                 'iglesias_asignadas' => 'Tacna, Moquegua, Abancay',
                 'estado' => 'activo'
-            ],
-
-            // SECTOR ORIENTE
-            [
-                'codigo' => 'PO001',
-                'nombre_completo' => 'Pastor David Emmanuel Ríos',
-                'celular' => '+51 944 333 222',
-                'email' => 'drios@bethel.pe',
-                'sector' => 'ORIENTE',
-                'fecha_ordenacion' => '2017-07-30',
-                'iglesias_asignadas' => 'Iquitos, Pucallpa, Tarapoto',
-                'estado' => 'activo',
-                'observaciones' => 'Especialista en ministerio amazónico'
             ]
         ];
 

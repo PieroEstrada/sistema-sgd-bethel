@@ -439,10 +439,10 @@
                 <div class="demo-credentials">
                     <h6><i class="fas fa-key me-2"></i>Credenciales de Prueba</h6>
                     <small>
-                        <strong>Admin:</strong> admin@bethel.pe / password<br>
-                        <strong>Gerente:</strong> cmendoza@bethel.pe / password<br>
-                        <strong>Jefe Est.:</strong> jsanchez@bethel.pe / password<br>
-                        <strong>Operador:</strong> lcastro@bethel.pe / password
+                        <strong>Admin:</strong> acueto@betheltv.tv / bethel2024<br>
+                        <strong>Sectorista:</strong> rbravo@betheltv.tv / bethel2024<br>
+                        <strong>Enc. Lab.:</strong> rcastillo@betheltv.tv / bethel2024<br>
+                        <strong>Visor:</strong> jespiritu@betheltv.tv / bethel2024
                     </small>
                 </div>
                 
@@ -562,19 +562,19 @@
             if (isVerySmallScreen) {
                 // Grid 2x2 para pantallas muy pequeñas
                 quickFillContainer.innerHTML = `
-                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="fillCredentials('admin@bethel.pe', 'admin123')">Admin</button>
-                    <button type="button" class="btn btn-outline-warning btn-sm" onclick="fillCredentials('cmendoza@bethel.pe', 'bethel123')">Gerente</button>
-                    <button type="button" class="btn btn-outline-info btn-sm" onclick="fillCredentials('jsanchez@bethel.pe', 'bethel123')">Jefe</button>
-                    <button type="button" class="btn btn-outline-success btn-sm" onclick="fillCredentials('lcastro@bethel.pe', 'bethel123')">Operador</button>
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="fillCredentials('acueto@betheltv.tv', 'bethel2024')">Admin</button>
+                    <button type="button" class="btn btn-outline-warning btn-sm" onclick="fillCredentials('rbravo@betheltv.tv', 'bethel2024')">Sector</button>
+                    <button type="button" class="btn btn-outline-info btn-sm" onclick="fillCredentials('rcastillo@betheltv.tv', 'bethel2024')">Lab</button>
+                    <button type="button" class="btn btn-outline-success btn-sm" onclick="fillCredentials('jespiritu@betheltv.tv', 'bethel2024')">Visor</button>
                 `;
             } else {
                 // Layout normal en línea
                 quickFillContainer.innerHTML = `
                     <div class="d-flex gap-1 flex-wrap justify-content-center">
-                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="fillCredentials('admin@bethel.pe', 'admin123')">Admin</button>
-                        <button type="button" class="btn btn-outline-warning btn-sm" onclick="fillCredentials('cmendoza@bethel.pe', 'bethel123')">Gerente</button>
-                        <button type="button" class="btn btn-outline-info btn-sm" onclick="fillCredentials('jsanchez@bethel.pe', 'bethel123')">Jefe</button>
-                        <button type="button" class="btn btn-outline-success btn-sm" onclick="fillCredentials('lcastro@bethel.pe', 'bethel123')">Operador</button>
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="fillCredentials('acueto@betheltv.tv', 'bethel2024')">Admin</button>
+                        <button type="button" class="btn btn-outline-warning btn-sm" onclick="fillCredentials('rbravo@betheltv.tv', 'bethel2024')">Sectorista</button>
+                        <button type="button" class="btn btn-outline-info btn-sm" onclick="fillCredentials('rcastillo@betheltv.tv', 'bethel2024')">Enc. Lab</button>
+                        <button type="button" class="btn btn-outline-success btn-sm" onclick="fillCredentials('jespiritu@betheltv.tv', 'bethel2024')">Visor</button>
                     </div>
                 `;
             }

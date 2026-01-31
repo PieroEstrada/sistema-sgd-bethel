@@ -16,7 +16,10 @@
     
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+
+    <!-- Vite Assets (Alpine.js + Echo para WebSockets) -->
+    @vite(['resources/js/app.js'])
+
     <!-- Custom CSS -->
     <style>
         :root {
@@ -331,12 +334,102 @@
         .hover-row:hover {
             background-color: rgba(78, 115, 223, 0.05);
         }
+
+        /* ⚡ NOTIFICATION BELL */
+        .notification-bell {
+            background: none;
+            border: none;
+            color: #6c757d;
+            padding: 0.5rem;
+            transition: all 0.2s ease;
+        }
+
+        .notification-bell:hover {
+            color: var(--bethel-secondary);
+        }
+
+        .notification-badge {
+            font-size: 0.65rem;
+            padding: 0.25rem 0.45rem;
+        }
+
+        .notification-dropdown {
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .notification-item {
+            border-bottom: 1px solid #f1f1f1;
+            transition: background-color 0.2s ease;
+        }
+
+        .notification-item:last-child {
+            border-bottom: none;
+        }
+
+        .notification-item:hover {
+            background-color: #f8f9fc;
+        }
+
+        .notification-icon {
+            width: 24px;
+            text-align: center;
+        }
+
+        /* ⚡ GLOBAL LOADER OVERLAY */
+        .global-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.2s ease, visibility 0.2s ease;
+        }
+
+        .global-loader.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .global-loader .loader-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        .global-loader .loader-text {
+            color: #fff;
+            margin-top: 15px;
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
     
     @stack('styles')
 </head>
 
 <body>
+    <!-- Global Loading Overlay -->
+    <div class="global-loader" id="globalLoader">
+        <div class="loader-spinner"></div>
+        <div class="loader-text">Cargando...</div>
+    </div>
+
     <!-- Mobile Overlay -->
     <div class="mobile-overlay" id="mobileOverlay"></div>
 
@@ -389,11 +482,27 @@
             </div>
 
             <div class="nav-item">
-                <a class="nav-link {{ request()->routeIs('digitalizacion.*') ? 'active' : '' }}" href="#" onclick="showComingSoon('Digitalización')">
+                <a class="nav-link {{ request()->routeIs('tickets.*') ? 'active' : '' }}" href="{{ route('tickets.index') }}">
+                    <i class="fas fa-ticket-alt"></i>
+                    <span class="nav-text">Tickets</span>
+                </a>
+            </div>
+
+            <div class="nav-item">
+                <a class="nav-link {{ request()->routeIs('chat.*') ? 'active' : '' }}" href="{{ route('chat.index') }}">
+                    <i class="fas fa-comments"></i>
+                    <span class="nav-text">Mensajes</span>
+                </a>
+            </div>
+
+            {{-- Digitalización: Módulo desactivado
+            <div class="nav-item">
+                <a class="nav-link {{ request()->routeIs('digitalizacion.*') ? 'active' : '' }}" href="#">
                     <i class="fas fa-folder-open"></i>
                     <span class="nav-text">Digitalización</span>
                 </a>
             </div>
+            --}}
         </div>
     </nav>
 
@@ -412,19 +521,126 @@
                 </div>
             </div>
             
-            <div class="dropdown">
-                <button class="btn dropdown-toggle d-flex align-items-center" type="button" 
-                        id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                    <span class="d-none d-sm-inline small me-2">Usuario Demo</span>
-                    <i class="fas fa-user-circle fa-lg"></i>
-                </button>
+            <div class="d-flex align-items-center">
+                <!-- Notification Bell -->
+                <div class="dropdown me-3">
+                    @php
+                        $unreadNotifications = auth()->user()->unreadNotifications->take(10);
+                        $unreadCount = auth()->user()->unreadNotifications->count();
+                    @endphp
+                    <button class="btn position-relative notification-bell" type="button"
+                            id="notificationDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-bell fa-lg"></i>
+                        @if($unreadCount > 0)
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge">
+                                {{ $unreadCount > 99 ? '99+' : $unreadCount }}
+                            </span>
+                        @endif
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end notification-dropdown" aria-labelledby="notificationDropdown" style="width: 350px; max-height: 400px; overflow-y: auto;">
+                        <li><h6 class="dropdown-header">Notificaciones</h6></li>
+                        @forelse($unreadNotifications as $notification)
+                            <li>
+                                <a class="dropdown-item notification-item py-2" href="{{ $notification->data['url'] ?? '#' }}"
+                                   onclick="markAsRead('{{ $notification->id }}')">
+                                    <div class="d-flex align-items-start">
+                                        <div class="notification-icon me-2">
+                                            @if(isset($notification->data['tipo']))
+                                                @if($notification->data['tipo'] === 'renovacion')
+                                                    <i class="fas fa-exclamation-triangle text-warning"></i>
+                                                @elseif($notification->data['tipo'] === 'ticket')
+                                                    <i class="fas fa-ticket-alt text-info"></i>
+                                                @else
+                                                    <i class="fas fa-bell text-primary"></i>
+                                                @endif
+                                            @else
+                                                <i class="fas fa-bell text-primary"></i>
+                                            @endif
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <div class="fw-semibold small">{{ $notification->data['titulo'] ?? 'Notificación' }}</div>
+                                            <div class="text-muted small text-truncate" style="max-width: 280px;">
+                                                {{ $notification->data['mensaje'] ?? '' }}
+                                            </div>
+                                            <div class="text-muted small">
+                                                {{ $notification->created_at->diffForHumans() }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </a>
+                            </li>
+                        @empty
+                            <li>
+                                <div class="dropdown-item text-center text-muted py-3">
+                                    <i class="fas fa-check-circle mb-2 d-block"></i>
+                                    No tienes notificaciones nuevas
+                                </div>
+                            </li>
+                        @endforelse
+                        @if($unreadCount > 0)
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <form method="POST" action="{{ route('notifications.mark-all-read') }}" class="px-3 py-2">
+                                    @csrf
+                                    <button type="submit" class="btn btn-sm btn-outline-primary w-100">
+                                        Marcar todas como leídas
+                                    </button>
+                                </form>
+                            </li>
+                        @endif
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a href="{{ route('notifications.index') }}" class="dropdown-item text-center text-primary py-2">
+                                <i class="fas fa-list me-1"></i> Ver todas las notificaciones
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- User Dropdown -->
+                <div class="dropdown">
+                    <button class="btn dropdown-toggle d-flex align-items-center" type="button"
+                            id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        {{-- <span class="d-none d-sm-inline small me-2">Usuario Demo</span> --}}
+                        <span class="d-none d-sm-inline small me-2">{{ auth()->user()->name }}</span>
+
+                        <i class="fas fa-user-circle fa-lg"></i>
+                    </button>
                 <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                    <li><h6 class="dropdown-header">Sistema Demo</h6></li>
-                    <li><span class="dropdown-item-text small text-muted">Administrador</span></li>
+                    <li><h6 class="dropdown-header">{{ auth()->user()->name }}</h6></li>
+                    <li><span class="dropdown-item-text small text-muted">{{ auth()->user()->rol->getDisplayName() }}</span></li>
                     <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Configuración</a></li>
-                    <li><a class="dropdown-item" href="#"><i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión</a></li>
+
+                    <li>
+                        <a class="dropdown-item" href="{{ route('profile.edit') }}">
+                            <i class="fas fa-user me-2"></i>Mi Perfil
+                        </a>
+                    </li>
+
+
+                    
+
+
+                    @if(auth()->user()->rol->value === 'administrador')
+                        <li>
+                            <a class="dropdown-item" href="{{ route('usuarios.index') }}">
+                                <i class="fas fa-users me-2"></i>Usuarios
+                            </a>
+                        </li>
+                    @endif
+
+                    <li><hr class="dropdown-divider"></li>
+
+                    <li>
+                        <form method="POST" action="{{ route('logout') }}">
+                            @csrf
+                            <button type="submit" class="dropdown-item">
+                                <i class="fas fa-sign-out-alt me-2"></i>Cerrar sesión
+                            </button>
+                        </form>
+                    </li>
                 </ul>
+                </div>
             </div>
         </nav>
 
@@ -465,6 +681,17 @@
 
         // Auto-hide alerts
         setTimeout(function() { $('.alert').fadeOut('slow'); }, 5000);
+
+        // ⚡ MARK NOTIFICATION AS READ
+        function markAsRead(notificationId) {
+            fetch(`/notifications/${notificationId}/mark-read`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Content-Type': 'application/json'
+                }
+            }).catch(err => console.log('Error marking notification as read:', err));
+        }
 
         // ⚡ SIDEBAR FUNCTIONALITY
         document.addEventListener('DOMContentLoaded', function() {
@@ -526,6 +753,85 @@
         function showComingSoon(module) {
             alert(`El módulo "${module}" estará disponible próximamente.\n\nPor ahora puedes navegar entre Dashboard y Estaciones.`);
         }
+
+        // ⚡ GLOBAL LOADER FUNCTIONS
+        const globalLoader = document.getElementById('globalLoader');
+
+        function showLoader(text = 'Cargando...') {
+            if (globalLoader) {
+                globalLoader.querySelector('.loader-text').textContent = text;
+                globalLoader.classList.add('active');
+            }
+        }
+
+        function hideLoader() {
+            if (globalLoader) {
+                globalLoader.classList.remove('active');
+            }
+        }
+
+        // Auto-show loader on navigation and form submit
+        document.addEventListener('DOMContentLoaded', function() {
+            // Hide loader when page finishes loading
+            hideLoader();
+
+            // Show loader on internal link clicks (navigation)
+            document.querySelectorAll('a[href]:not([target="_blank"]):not([href^="#"]):not([href^="javascript"]):not([download])').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    const href = this.getAttribute('href');
+                    // Skip external links and anchors
+                    if (href && !href.startsWith('http') && !href.startsWith('mailto:') && !href.startsWith('tel:')) {
+                        showLoader('Cargando...');
+                    }
+                });
+            });
+
+            // Show loader on form submit
+            document.querySelectorAll('form').forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    // Skip forms with data-no-loader attribute
+                    if (!this.hasAttribute('data-no-loader')) {
+                        showLoader('Procesando...');
+                    }
+                });
+            });
+
+            // Show loader on buttons with data-loader attribute
+            document.querySelectorAll('[data-loader]').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const text = this.getAttribute('data-loader') || 'Cargando...';
+                    showLoader(text);
+                    // For download links, hide after a delay
+                    if (this.hasAttribute('href') && (this.hasAttribute('download') || this.href.includes('exportar'))) {
+                        setTimeout(hideLoader, 3000);
+                    }
+                });
+            });
+
+            // Show loader on export links (Excel/PDF)
+            document.querySelectorAll('a[href*="exportar"]').forEach(link => {
+                link.addEventListener('click', function() {
+                    showLoader('Exportando...');
+                    // Hide after delay since we can't detect download completion
+                    setTimeout(hideLoader, 4000);
+                });
+            });
+        });
+
+        // Hide loader on page show (back/forward navigation)
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) {
+                hideLoader();
+            }
+        });
+
+        // Global AJAX/Fetch interceptor (optional - for fetch requests)
+        const originalFetch = window.fetch;
+        window.fetch = function(...args) {
+            return originalFetch.apply(this, args).finally(() => {
+                // Don't auto-hide for fetch, let specific code handle it
+            });
+        };
     </script>
     
     @stack('scripts')

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Enums\EstadoIncidencia;
 use App\Enums\PrioridadIncidencia;
+use App\Enums\TipoIncidencia;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\DB;
 
@@ -18,14 +19,18 @@ class Incidencia extends Model
 
     protected $fillable = [
         'titulo',
-        'descripcion', 
+        'tipo',
+        'descripcion',
         'estacion_id',
         'prioridad',
         'estado',
         'reportado_por',
-        'reportado_por_user_id', 
+        'reportado_por_user_id',
         'asignado_a',
         'asignado_a_user_id',
+        'area_responsable_actual',
+        'contador_transferencias',
+        'fecha_ultima_transferencia',
         'fecha_reporte',
         'fecha_resolucion',
         'tiempo_respuesta_estimado',
@@ -38,11 +43,13 @@ class Incidencia extends Model
     ];
 
     protected $casts = [
+        'tipo' => TipoIncidencia::class,
         'prioridad' => PrioridadIncidencia::class,
         'estado' => EstadoIncidencia::class,
         'fecha_reporte' => 'datetime',
         'fecha_resolucion' => 'datetime',
         'fecha_visita_programada' => 'datetime',
+        'fecha_ultima_transferencia' => 'datetime',
         'requiere_visita_tecnica' => 'boolean',
         'costo_soles' => 'decimal:2',
         'costo_dolares' => 'decimal:2',
@@ -51,7 +58,8 @@ class Incidencia extends Model
 
     protected $dates = [
         'fecha_reporte',
-        'fecha_resolucion', 
+        'fecha_resolucion',
+        'fecha_ultima_transferencia',
         'fecha_visita_programada',
         'created_at',
         'updated_at',
@@ -102,6 +110,15 @@ class Incidencia extends Model
         return $this->belongsTo(User::class, 'asignado_a');
     }
 
+    /**
+     * Historial de cambios de la incidencia
+     */
+    public function historial()
+    {
+        return $this->hasMany(IncidenciaHistorial::class, 'incidencia_id')
+                    ->orderBy('created_at', 'desc');
+    }
+
     // =====================================================
     // ACCESSORS ROBUSTOS (SOPORTA ENUM Y STRING)
     // =====================================================
@@ -120,6 +137,38 @@ class Incidencia extends Model
     public function getEstadoValueAttribute(): string
     {
         return $this->estado instanceof \BackedEnum ? $this->estado->value : (string) $this->estado;
+    }
+
+    /**
+     * Obtener valor de tipo como string
+     */
+    public function getTipoValueAttribute(): string
+    {
+        return $this->tipo instanceof \BackedEnum ? $this->tipo->value : (string) ($this->tipo ?? 'FALLAS');
+    }
+
+    /**
+     * Obtener label del tipo
+     */
+    public function getTipoLabelAttribute(): string
+    {
+        return $this->tipo instanceof TipoIncidencia ? $this->tipo->label() : 'Fallas';
+    }
+
+    /**
+     * Obtener color del tipo
+     */
+    public function getTipoColorAttribute(): string
+    {
+        return $this->tipo instanceof TipoIncidencia ? $this->tipo->color() : 'danger';
+    }
+
+    /**
+     * Obtener icono del tipo
+     */
+    public function getTipoIconoAttribute(): string
+    {
+        return $this->tipo instanceof TipoIncidencia ? $this->tipo->icono() : 'fa-exclamation-triangle';
     }
 
     /**
@@ -279,6 +328,11 @@ class Incidencia extends Model
         });
     }
 
+    public function scopeDeTipo($query, $tipo)
+    {
+        return $query->where('tipo', $tipo);
+    }
+
     // =====================================================
     // MÉTODOS DE NEGOCIO
     // =====================================================
@@ -303,6 +357,15 @@ class Incidencia extends Model
         }
 
         return $this->created_at->diffInHours(now()) < 24;
+    }
+
+    /**
+     * Verificar si la incidencia puede ser transferida a otra área/responsable
+     */
+    public function esTransferible(): bool
+    {
+        $estadoValue = $this->estado_value;
+        return in_array($estadoValue, ['abierta', 'en_proceso']);
     }
 
     /**
@@ -366,6 +429,41 @@ class Incidencia extends Model
         }
 
         return $this->save();
+    }
+
+    /**
+     * Transferir responsabilidad a otra área/usuario
+     *
+     * @param string|null $nuevaArea Área destino (Técnica, Logística, Operaciones, etc.)
+     * @param int|null $nuevoResponsableId ID del nuevo usuario responsable
+     * @param string $observaciones Motivo de la transferencia (obligatorio)
+     * @param int $usuarioAccionId ID del usuario que realiza la transferencia
+     * @return bool
+     */
+    public function transferirResponsabilidad(
+        string $nuevaArea,
+        string $observaciones,
+        int $usuarioAccionId
+    ): bool {
+        $areaAnterior = $this->area_responsable_actual;
+
+        $this->area_responsable_actual = $nuevaArea;
+        $this->contador_transferencias = ($this->contador_transferencias ?? 0) + 1;
+        $this->fecha_ultima_transferencia = now();
+
+        if (!$this->save()) {
+            return false;
+        }
+
+        IncidenciaHistorial::registrarTransferenciaArea(
+            $this,
+            $areaAnterior,
+            $nuevaArea,
+            $usuarioAccionId,
+            $observaciones
+        );
+
+        return true;
     }
 
     // =====================================================

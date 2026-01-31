@@ -7,7 +7,7 @@ enum Sector: string
     case NORTE = 'NORTE';
     case CENTRO = 'CENTRO';
     case SUR = 'SUR';
-    case ORIENTE = 'ORIENTE';  // Para futuro crecimiento
+    // case ORIENTE = 'ORIENTE';
 
     public function getLabel(): string
     {
@@ -15,8 +15,13 @@ enum Sector: string
             self::NORTE => 'Norte',
             self::CENTRO => 'Centro',
             self::SUR => 'Sur',
-            self::ORIENTE => 'Oriente',
+            // self::ORIENTE => 'Oriente',
         };
+    }
+
+    public function label(): string
+    {
+        return $this->getLabel();
     }
 
     public function getDescription(): string
@@ -25,7 +30,7 @@ enum Sector: string
             self::NORTE => 'Departamentos del norte del Perú',
             self::CENTRO => 'Departamentos del centro del Perú',
             self::SUR => 'Departamentos del sur del Perú',
-            self::ORIENTE => 'Departamentos de la selva peruana',
+            // self::ORIENTE => 'Departamentos de la selva peruana',
         };
     }
 
@@ -38,25 +43,25 @@ enum Sector: string
             ],
             self::CENTRO => [
                 'Lima', 'Callao', 'Ancash', 'Huánuco', 'Pasco',
-                'Junín', 'Huancavelica', 'Ica'
+                'Junín', 'Huancavelica', 'Ica', 'Loreto', 'Ucayali', 'Madre de Dios'
             ],
             self::SUR => [
                 'Arequipa', 'Moquegua', 'Tacna', 'Cusco',
                 'Apurímac', 'Ayacucho', 'Puno'
             ],
-            self::ORIENTE => [
-                'Loreto', 'Ucayali', 'Madre de Dios'
-            ]
+            // self::ORIENTE => [
+            //     'Loreto', 'Ucayali', 'Madre de Dios'
+            // ]
         };
     }
 
     public function getColor(): string
     {
         return match($this) {
-            self::NORTE => 'info',
+            self::NORTE => 'success',
             self::CENTRO => 'warning',
             self::SUR => 'danger',
-            self::ORIENTE => 'success',
+            // self::ORIENTE => 'success',
         };
     }
 
@@ -66,7 +71,7 @@ enum Sector: string
             self::NORTE => 'fas fa-arrow-up',
             self::CENTRO => 'fas fa-dot-circle',
             self::SUR => 'fas fa-arrow-down',
-            self::ORIENTE => 'fas fa-tree',
+            // self::ORIENTE => 'fas fa-tree',
         };
     }
 
@@ -106,7 +111,7 @@ enum Sector: string
             'total' => $estaciones->count(),
             'al_aire' => $estaciones->where('estado', EstadoEstacion::AL_AIRE)->count(),
             'fuera_aire' => $estaciones->where('estado', EstadoEstacion::FUERA_DEL_AIRE)->count(),
-            'mantenimiento' => $estaciones->where('estado', EstadoEstacion::MANTENIMIENTO)->count(),
+            // 'mantenimiento' ya no existe como estado
             'no_instalada' => $estaciones->where('estado', EstadoEstacion::NO_INSTALADA)->count()
         ];
     }

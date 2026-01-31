@@ -15,8 +15,23 @@ class IncidenciaSeeder extends Seeder
     public function run()
     {
         $estaciones = Estacion::all();
-        $operadores = User::where('rol', RolUsuario::OPERADOR)->get();
-        $jefes = User::where('rol', RolUsuario::JEFE_ESTACION)->get();
+
+        // Usuarios que pueden reportar incidencias (todos los roles activos)
+        $reportadores = User::whereIn('rol', [
+            RolUsuario::SECTORISTA->value,
+            RolUsuario::COORDINADOR_OPERACIONES->value,
+            RolUsuario::ENCARGADO_INGENIERIA->value,
+            RolUsuario::ENCARGADO_LABORATORIO->value,
+            RolUsuario::ADMINISTRADOR->value,
+        ])->get();
+
+        // Usuarios que pueden ser asignados a incidencias (roles técnicos)
+        $tecnicos = User::whereIn('rol', [
+            RolUsuario::SECTORISTA->value,
+            RolUsuario::COORDINADOR_OPERACIONES->value,
+            RolUsuario::ENCARGADO_INGENIERIA->value,
+            RolUsuario::ENCARGADO_LABORATORIO->value,
+        ])->get();
 
         // Incidencias realistas basadas en problemas típicos de estaciones de radio/TV
         $tiposIncidencias = [
@@ -71,17 +86,23 @@ class IncidenciaSeeder extends Seeder
 
         // Crear incidencias para diferentes estaciones
         $incidenciasCreadas = 0;
-        
+
+        // Verificar que hay usuarios disponibles
+        if ($reportadores->isEmpty() || $tecnicos->isEmpty()) {
+            $this->command->warn('⚠️ No hay usuarios con roles apropiados para crear incidencias');
+            return;
+        }
+
         foreach ($estaciones as $estacion) {
             $numIncidencias = rand(1, 3);
-            
+
             for ($i = 0; $i < $numIncidencias; $i++) {
                 $tipoIncidencia = $tiposIncidencias[array_rand($tiposIncidencias)];
-                $reportadoPor = $operadores->random();
+                $reportadoPor = $reportadores->random();
                 $fechaReporte = now()->subDays(rand(1, 90));
-                
+
                 $estado = $this->determinarEstado($fechaReporte);
-                
+
                 $incidenciaData = [
                     'titulo' => $tipoIncidencia['titulo'],
                     'descripcion' => $tipoIncidencia['descripcion'] . " - Estación: {$estacion->localidad}",
@@ -95,7 +116,7 @@ class IncidenciaSeeder extends Seeder
                 ];
 
                 if (in_array($estado, [EstadoIncidencia::EN_PROCESO, EstadoIncidencia::RESUELTA, EstadoIncidencia::CERRADA])) {
-                    $incidenciaData['asignado_a'] = $operadores->random()->id;
+                    $incidenciaData['asignado_a'] = $tecnicos->random()->id;
                 }
 
                 if (in_array($estado, [EstadoIncidencia::RESUELTA, EstadoIncidencia::CERRADA])) {

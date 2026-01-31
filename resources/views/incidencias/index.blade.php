@@ -23,9 +23,14 @@
                     </h1>
                     <p class="text-muted">Monitoreo y seguimiento de incidencias técnicas</p>
                 </div>
-                <a href="{{ route('incidencias.create') }}" class="btn btn-danger">
-                    <i class="fas fa-plus me-2"></i>Nueva Incidencia
-                </a>
+                <div class="btn-group" role="group">
+                    <a href="{{ route('incidencias.create') }}" class="btn btn-danger">
+                        <i class="fas fa-plus me-2"></i>Nueva Incidencia
+                    </a>
+                    <button type="button" class="btn btn-success" onclick="abrirModalExportacion()">
+                        <i class="fas fa-file-excel me-2"></i>Exportar
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -148,20 +153,24 @@
                             <option value="">Todos los estados</option>
                             <option value="abierta" {{ request('estado') == 'abierta' ? 'selected' : '' }}>Abierta</option>
                             <option value="en_proceso" {{ request('estado') == 'en_proceso' ? 'selected' : '' }}>En Proceso</option>
-                            <option value="cerrada" {{ request('estado') == 'cerrada' ? 'selected' : '' }}>Cerrada</option>
+                            <option value="resuelta" {{ request('estado') == 'resuelta' ? 'selected' : '' }}>Resuelta</option>
+                            <option value="cerrada" {{ request('estado') == 'cerrada' ? 'selected' : '' }}>Finalizado</option>
+                            <option value="informativo" {{ request('estado') == 'informativo' ? 'selected' : '' }}>Informativo</option>
                             <option value="cancelada" {{ request('estado') == 'cancelada' ? 'selected' : '' }}>Cancelada</option>
                         </select>
                     </div>
                     <div class="col-lg-2 col-md-4 mb-2">
-                        <label class="form-label small">Reportante</label>
-                        <select class="form-control form-control-sm" name="reportado_por_usuario">
-                            <option value="">Todos los reportantes</option>
-                            @foreach($usuarios as $usuario)
-                                <option value="{{ $usuario->id }}" 
-                                        {{ request('reportado_por_usuario') == $usuario->id ? 'selected' : '' }}>
-                                    {{ $usuario->name }}
-                                </option>
-                            @endforeach
+                        <label class="form-label small">Área Responsable</label>
+                        <select class="form-control form-control-sm" name="area_responsable">
+                            <option value="">Todas las áreas</option>
+                            <option value="ingenieria" {{ request('area_responsable') == 'ingenieria' ? 'selected' : '' }}>Ingeniería</option>
+                            <option value="laboratorio" {{ request('area_responsable') == 'laboratorio' ? 'selected' : '' }}>Laboratorio</option>
+                            <option value="logistica" {{ request('area_responsable') == 'logistica' ? 'selected' : '' }}>Logística</option>
+                            <option value="operaciones" {{ request('area_responsable') == 'operaciones' ? 'selected' : '' }}>Operaciones</option>
+                            <option value="administracion" {{ request('area_responsable') == 'administracion' ? 'selected' : '' }}>Administración</option>
+                            <option value="contabilidad" {{ request('area_responsable') == 'contabilidad' ? 'selected' : '' }}>Contabilidad</option>
+                            <option value="iglesia_local" {{ request('area_responsable') == 'iglesia_local' ? 'selected' : '' }}>Iglesia Local</option>
+                            <option value="sin_asignar" {{ request('area_responsable') == 'sin_asignar' ? 'selected' : '' }}>Sin Asignar</option>
                         </select>
                     </div>
                     <div class="col-lg-2 col-md-4 mb-2">
@@ -186,72 +195,95 @@
             <h6 class="m-0 font-weight-bold text-danger">
                 <i class="fas fa-list me-2"></i>Lista de Incidencias
             </h6>
-            <span class="badge badge-info">{{ $incidencias->total() }} incidencias encontradas</span>
+            <div class="d-flex align-items-center gap-3">
+                <div class="d-flex align-items-center">
+                    <label class="me-2 mb-0 small">Mostrar:</label>
+                    <select class="form-select form-select-sm" id="perPageSelect" style="width: auto;" onchange="cambiarPaginacion(this.value)">
+                        <option value="15" {{ request('per_page', 15) == 15 ? 'selected' : '' }}>15</option>
+                        <option value="25" {{ request('per_page') == 25 ? 'selected' : '' }}>25</option>
+                        <option value="50" {{ request('per_page') == 50 ? 'selected' : '' }}>50</option>
+                        <option value="100" {{ request('per_page') == 100 ? 'selected' : '' }}>100</option>
+                    </select>
+                </div>
+                <span class="badge bg-info">{{ $incidencias->total() }} incidencias</span>
+            </div>
         </div>
         <div class="card-body">
             @if($incidencias->count() > 0)
                 <div class="table-responsive">
-                    <table class="table table-bordered table-hover" id="dataTable" width="100%" cellspacing="0">
+                    <table class="table table-bordered table-hover" id="incidenciasTable" width="100%" cellspacing="0">
                         <thead class="thead-dark">
                             <tr>
-                                <th>Código</th>
-                                <th>Estación</th>
-                                <th>Descripción</th>
-                                <th>Prioridad</th>
-                                <th>Estado</th>
-                                <th>Reportado Por</th>
-                                <th>Asignado A</th>
-                                <th>Fecha</th>
-                                <th>Tiempo</th>
-                                <th>Acciones</th>
+                                <th class="js-sort" data-type="text">Código</th>
+                                <th class="js-sort" data-type="text">Estación</th>
+                                <th class="js-sort" data-type="text">Descripción</th>
+                                <th class="js-sort" data-type="text">Prioridad</th>
+                                <th class="js-sort" data-type="text">Estado</th>
+                                <th class="js-sort" data-type="text">Reportado Por</th>
+                                <th class="js-sort" data-type="text">Área Responsable</th>
+                                <th class="js-sort" data-type="number">Fecha</th>
+                                <th class="js-sort" data-type="number">Tiempo</th>
+                                <th data-no-sort="true">Acciones</th>
                             </tr>
                         </thead>
+
                         <tbody>
                             @foreach($incidencias as $incidencia)
+                            @php
+                                $codigoNum = (int) $incidencia->id;
+                                $fechaTs = $incidencia->fecha_reporte ? $incidencia->fecha_reporte->getTimestamp() : 0;
+
+                                $segundos = time() - $incidencia->fecha_reporte->getTimestamp();
+                                $horasTranscurridas = intdiv($segundos, 3600);
+                                $diasTranscurridos  = intdiv($horasTranscurridas, 24);
+                            @endphp
+
                             <tr class="table-row-hover">
-                                <td>
+                                <td data-sort="{{ $codigoNum }}">
                                     <strong>INC-{{ str_pad($incidencia->id, 6, '0', STR_PAD_LEFT) }}</strong>
                                 </td>
-                                <td>
-                                    <strong>{{ $incidencia->estacion->codigo ?? 'N/A' }}</strong><br>
+
+                                <td data-sort="{{ strtolower($incidencia->estacion->localidad ?? 'n/a') }}">
+                                    <strong>{{ $incidencia->estacion->localidad ?? 'N/A' }}</strong><br>
                                     <small class="text-muted">{{ Str::limit($incidencia->estacion->razon_social ?? 'N/A', 30) }}</small>
                                 </td>
-                                
-                                <td>
+
+                                <td data-sort="{{ strtolower($incidencia->titulo ?? '') }}">
                                     <strong>{{ $incidencia->titulo }}</strong><br>
                                     <small class="text-muted">{{ Str::limit($incidencia->descripcion, 80) }}</small>
                                 </td>
-                                <td>
-                                    @php
-                                        // ✅ CORREGIDO: Usar el accessor que maneja tanto enum como string
-                                        $prioridadValue = $incidencia->prioridad_value;
-                                        $prioridadConfig = [
-                                            'critica' => ['class' => 'danger', 'label' => 'CRÍTICA'],
-                                            'alta' => ['class' => 'warning', 'label' => 'ALTA'],
-                                            'media' => ['class' => 'info', 'label' => 'MEDIA'],
-                                            'baja' => ['class' => 'success', 'label' => 'BAJA'],
-                                        ];
-                                        $config = $prioridadConfig[$prioridadValue] ?? ['class' => 'secondary', 'label' => strtoupper($prioridadValue)];
-                                    @endphp
-                                    <span class="badge bg-{{ $config['class'] }}">{{ $config['label'] }}</span>
+
+                                @php
+                                    $prioridadValue = $incidencia->prioridad_value;
+                                    $prioridadConfig = [
+                                        'critica' => ['class' => 'danger', 'label' => 'CRÍTICA'],
+                                        'alta' => ['class' => 'warning', 'label' => 'ALTA'],
+                                        'media' => ['class' => 'info', 'label' => 'MEDIA'],
+                                        'baja' => ['class' => 'success', 'label' => 'BAJA'],
+                                    ];
+                                    $configPrio = $prioridadConfig[$prioridadValue] ?? ['class' => 'secondary', 'label' => strtoupper($prioridadValue)];
+                                @endphp
+                                <td data-sort="{{ $prioridadValue }}">
+                                    <span class="badge bg-{{ $configPrio['class'] }}">{{ $configPrio['label'] }}</span>
                                 </td>
-                                <td>
-                                    @php
-                                        // ✅ CORREGIDO: Usar el accessor que maneja tanto enum como string
-                                        $estadoValue = $incidencia->estado_value;
-                                        $estadoConfig = [
-                                            'abierta' => ['class' => 'primary', 'label' => 'ABIERTA'],
-                                            'en_proceso' => ['class' => 'warning', 'label' => 'EN PROCESO'],
-                                            'resuelta' => ['class' => 'success', 'label' => 'RESUELTA'],
-                                            'cerrada' => ['class' => 'secondary', 'label' => 'CERRADA'],
-                                            'cancelada' => ['class' => 'dark', 'label' => 'CANCELADA'],
-                                        ];
-                                        $config = $estadoConfig[$estadoValue] ?? ['class' => 'secondary', 'label' => strtoupper($estadoValue)];
-                                    @endphp
-                                    <span class="badge bg-{{ $config['class'] }}">{{ $config['label'] }}</span>
+
+                                @php
+                                    $estadoValue = $incidencia->estado_value;
+                                    $estadoConfig = [
+                                        'abierta' => ['class' => 'primary', 'label' => 'ABIERTA'],
+                                        'en_proceso' => ['class' => 'warning', 'label' => 'EN PROCESO'],
+                                        'resuelta' => ['class' => 'success', 'label' => 'RESUELTA'],
+                                        'cerrada' => ['class' => 'secondary', 'label' => 'FINALIZADO'],
+                                        'cancelada' => ['class' => 'dark', 'label' => 'CANCELADA'],
+                                        'informativo' => ['class' => 'info', 'label' => 'INFORMATIVO'],
+                                    ];
+                                    $configEst = $estadoConfig[$estadoValue] ?? ['class' => 'secondary', 'label' => strtoupper($estadoValue)];
+                                @endphp
+                                <td data-sort="{{ $estadoValue }}">
+                                    <span class="badge bg-{{ $configEst['class'] }}">{{ $configEst['label'] }}</span>
                                 </td>
-                                
-                                <td>
+
+                                <td data-sort="{{ strtolower($incidencia->reportadoPor->name ?? 'no especificado') }}">
                                     @if($incidencia->reportadoPor)
                                         <strong>{{ $incidencia->reportadoPor->name }}</strong><br>
                                         <small class="text-muted">
@@ -262,31 +294,35 @@
                                         <span class="text-muted">No especificado</span>
                                     @endif
                                 </td>
-                                <td>
-                                    @if($incidencia->asignadoA)
-                                        <strong>{{ $incidencia->asignadoA->name }}</strong><br>
-                                        <small class="text-muted">
-                                            <i class="fas fa-user-cog me-1"></i>
-                                            {{ is_string($incidencia->asignadoA->rol) ? $incidencia->asignadoA->rol : $incidencia->asignadoA->rol->value }}
-                                        </small>
+
+                                <td data-sort="{{ strtolower($incidencia->area_responsable_actual ?? 'sin_asignar') }}">
+                                    @if($incidencia->area_responsable_actual)
+                                        @php
+                                            $areasLabels = [
+                                                'ingenieria' => ['label' => 'Ingeniería', 'class' => 'primary'],
+                                                'laboratorio' => ['label' => 'Laboratorio', 'class' => 'info'],
+                                                'logistica' => ['label' => 'Logística', 'class' => 'warning'],
+                                                'operaciones' => ['label' => 'Operaciones', 'class' => 'success'],
+                                                'administracion' => ['label' => 'Administración', 'class' => 'secondary'],
+                                                'contabilidad' => ['label' => 'Contabilidad', 'class' => 'dark'],
+                                                'iglesia_local' => ['label' => 'Iglesia Local', 'class' => 'light text-dark'],
+                                            ];
+                                            $areaInfo = $areasLabels[$incidencia->area_responsable_actual] ?? ['label' => ucfirst($incidencia->area_responsable_actual), 'class' => 'secondary'];
+                                        @endphp
+                                        <span class="badge bg-{{ $areaInfo['class'] }}">
+                                            <i class="fas fa-building me-1"></i>{{ $areaInfo['label'] }}
+                                        </span>
                                     @else
                                         <span class="text-muted"><i>Sin asignar</i></span>
                                     @endif
                                 </td>
-                                <td>
+
+                                <td data-sort="{{ $fechaTs }}">
                                     <strong>{{ $incidencia->fecha_reporte->format('d/m/Y') }}</strong><br>
                                     <small class="text-muted">{{ $incidencia->fecha_reporte->format('H:i') }}</small>
                                 </td>
-                                <td>
-                                    @php
-                                        // Diferencia en segundos entre ahora y la fecha de reporte
-                                        $segundos = time() - $incidencia->fecha_reporte->getTimestamp();
 
-                                        // Horas y días como enteros
-                                        $horasTranscurridas = intdiv($segundos, 3600);       // 0, 1, 2, 3...
-                                        $diasTranscurridos  = intdiv($horasTranscurridas, 24); // 0, 1, 2...
-                                    @endphp
-
+                                <td data-sort="{{ $segundos }}">
                                     @if ($diasTranscurridos >= 2)
                                         <span class="badge bg-danger">{{ $diasTranscurridos }} días</span>
                                     @elseif ($horasTranscurridas >= 24)
@@ -299,21 +335,30 @@
                                 </td>
 
                                 <td>
+                                    <!-- tus acciones igual -->
                                     <div class="btn-group" role="group">
-                                        <!-- Ver -->
-                                        <a href="{{ route('incidencias.show', $incidencia) }}" 
-                                        class="btn btn-info btn-sm" 
+                                        <a href="{{ route('incidencias.show', $incidencia) }}"
+                                        class="btn btn-info btn-sm"
                                         data-toggle="tooltip" title="Ver detalles">
                                             <i class="fas fa-eye"></i>
                                         </a>
-                                        
-                                        <!-- Editar -->
-                                        @if($incidencia->estado !== 'cerrada' || in_array(auth()->user()->rol, ['administrador', 'gerente']))
-                                            <a href="{{ route('incidencias.edit', $incidencia) }}" 
-                                            class="btn btn-warning btn-sm" 
+
+                                        @if($incidencia->estado !== 'cerrada' || in_array(auth()->user()->rol, ['administrador', 'coordinador_operaciones']))
+                                            <a href="{{ route('incidencias.edit', $incidencia) }}"
+                                            class="btn btn-warning btn-sm"
                                             data-toggle="tooltip" title="Editar">
                                                 <i class="fas fa-edit"></i>
                                             </a>
+                                        @endif
+
+                                        @if(in_array($incidencia->estado_value, ['abierta', 'en_proceso']))
+                                            <button type="button"
+                                                    class="btn btn-primary btn-sm"
+                                                    data-toggle="tooltip"
+                                                    title="Asignar área responsable"
+                                                    onclick="abrirModalAsignarArea({{ $incidencia->id }}, '{{ $incidencia->titulo }}', '{{ $incidencia->area_responsable_actual ?? '' }}')">
+                                                <i class="fas fa-share"></i>
+                                            </button>
                                         @endif
                                     </div>
                                 </td>
@@ -321,6 +366,7 @@
                             @endforeach
                         </tbody>
                     </table>
+
                 </div>
 
                 <!-- Paginación -->
@@ -365,7 +411,9 @@
                         <option value="">Seleccionar estado</option>
                         <option value="abierta">Abierta</option>
                         <option value="en_proceso">En Proceso</option>
-                        <option value="cerrada">Cerrada</option>
+                        <option value="resuelta">Resuelta</option>
+                        <option value="cerrada">Finalizado</option>
+                        <option value="informativo">Informativo</option>
                         <option value="cancelada">Cancelada</option>
                     </select>
                 </div>
@@ -431,12 +479,91 @@
     </div>
 </div>
 
+<!-- Modal de Exportación -->
+<div class="modal fade" id="modalExportacion" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-file-export me-2"></i>Exportar Incidencias
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Nota:</strong> La exportación aplicará los filtros actualmente seleccionados en la búsqueda.
+                </div>
+
+                <!-- Tipo de exportación -->
+                <div class="mb-4">
+                    <label class="form-label fw-bold">Formato de Exportación:</label>
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="tipoExportacion" id="exportPDF" value="pdf" checked>
+                        <label class="btn btn-outline-danger" for="exportPDF">
+                            <i class="fas fa-file-pdf me-2"></i>PDF
+                        </label>
+
+                        <input type="radio" class="btn-check" name="tipoExportacion" id="exportExcel" value="excel">
+                        <label class="btn btn-outline-success" for="exportExcel">
+                            <i class="fas fa-file-excel me-2"></i>Excel
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Selección de columnas -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Columnas a Exportar:</label>
+                    <div class="row" id="columnasExportacion">
+                        <!-- Se cargarán dinámicamente con JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Botones de selección rápida -->
+                <div class="d-flex justify-content-between mb-3">
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="seleccionarTodasColumnas()">
+                        <i class="fas fa-check-double me-1"></i>Seleccionar Todas
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="seleccionarColumnasDefecto()">
+                        <i class="fas fa-undo me-1"></i>Por Defecto
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="deseleccionarTodasColumnas()">
+                        <i class="fas fa-times me-1"></i>Ninguna
+                    </button>
+                </div>
+
+                <!-- Resumen -->
+                <div class="alert alert-secondary mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    <strong>Incidencias a exportar:</strong> <span id="totalExportacion">{{ $incidencias->total() }}</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-success" onclick="ejecutarExportacion()">
+                    <i class="fas fa-download me-2"></i>Exportar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @push('scripts')
 <script>
 let incidenciaIdParaCambioEstado = null;
 let incidenciaIdParaEliminacion = null;
+
+// ⚡ FUNCIÓN PARA CAMBIAR PAGINACIÓN
+function cambiarPaginacion(perPage) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('per_page', perPage);
+    url.searchParams.delete('page'); // Reset a página 1
+    window.location.href = url.toString();
+}
 
 // ⚡ FUNCIÓN PARA CAMBIAR ESTADO
 function cambiarEstado(incidenciaId, codigoIncidencia) {
@@ -548,14 +675,197 @@ function ejecutarEliminacion() {
 }
 
 // ⚡ INICIALIZACIÓN
-document.addEventListener('DOMContentLoaded', function() {
-    // Inicializar tooltips
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-toggle="tooltip"]'))
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl)
-    })
+document.addEventListener('DOMContentLoaded', function () {
+    // 1) Inicializar tooltips (Bootstrap 5)
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-toggle="tooltip"]'));
+    tooltipTriggerList.forEach(function (el) {
+        new bootstrap.Tooltip(el);
+    });
+
+    // 2) Orden simple por columnas (sin DataTables)
+    const table = document.getElementById('incidenciasTable'); // asegúrate que tu <table> tenga este id
+    if (!table) return;
+
+    const tbody = table.querySelector('tbody');
+    const headers = table.querySelectorAll('thead th');
+
+    let lastSortedIndex = -1;
+    let lastDir = 'asc';
+
+    const parseValue = (td, type) => {
+        const raw = (td?.dataset.sort ?? td?.textContent ?? '').trim();
+
+        if (type === 'number') {
+            const n = Number(raw);
+            return Number.isFinite(n) ? n : -Infinity;
+        }
+
+        return raw.toLowerCase();
+    };
+
+    const sortRows = (colIndex, dir, type) => {
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        const factor = dir === 'asc' ? 1 : -1;
+
+        rows.sort((a, b) => {
+            const aTd = a.children[colIndex];
+            const bTd = b.children[colIndex];
+
+            const va = parseValue(aTd, type);
+            const vb = parseValue(bTd, type);
+
+            if (va < vb) return -1 * factor;
+            if (va > vb) return 1 * factor;
+            return 0;
+        });
+
+        const frag = document.createDocumentFragment();
+        rows.forEach(r => frag.appendChild(r));
+        tbody.appendChild(frag);
+    };
+
+    const resetIndicators = () => {
+        headers.forEach(th => {
+            th.removeAttribute('aria-sort');
+            th.classList.remove('sort-asc', 'sort-desc');
+        });
+    };
+
+    headers.forEach((th, index) => {
+        if (th.dataset.noSort === 'true') return;          // Acciones u otras columnas
+        if (!th.classList.contains('js-sort')) return;     // Solo las marcadas como ordenables
+
+        th.style.cursor = 'pointer';
+
+        th.addEventListener('click', () => {
+            const type = th.dataset.type || 'text';
+
+            let dir = 'asc';
+            if (lastSortedIndex === index) {
+                dir = lastDir === 'asc' ? 'desc' : 'asc';
+            }
+
+            resetIndicators();
+            th.setAttribute('aria-sort', dir === 'asc' ? 'ascending' : 'descending');
+            th.classList.add(dir === 'asc' ? 'sort-asc' : 'sort-desc');
+
+            sortRows(index, dir, type);
+
+            lastSortedIndex = index;
+            lastDir = dir;
+        });
+    });
 });
+
+
+
+// ==========================================
+// FUNCIONES DE EXPORTACIÓN
+// ==========================================
+
+let columnasDisponibles = {};
+let columnasDefecto = [];
+
+// Abrir modal de exportación
+function abrirModalExportacion() {
+    // Cargar columnas disponibles
+    fetch('/incidencias/columnas-exportacion')
+        .then(response => response.json())
+        .then(data => {
+            columnasDisponibles = data.columnas;
+            columnasDefecto = data.defecto;
+
+            renderizarColumnas();
+
+            const modal = new bootstrap.Modal(document.getElementById('modalExportacion'));
+            modal.show();
+        })
+        .catch(error => {
+            console.error('Error al cargar columnas:', error);
+            alert('Error al cargar las opciones de exportación');
+        });
+}
+
+// Renderizar checkboxes de columnas
+function renderizarColumnas() {
+    const container = document.getElementById('columnasExportacion');
+    container.innerHTML = '';
+
+    Object.keys(columnasDisponibles).forEach(key => {
+        const checked = columnasDefecto.includes(key) ? 'checked' : '';
+        const col = document.createElement('div');
+        col.className = 'col-md-6 mb-2';
+        col.innerHTML = `
+            <div class="form-check">
+                <input class="form-check-input columna-check" type="checkbox" value="${key}"
+                       id="col_${key}" ${checked}>
+                <label class="form-check-label" for="col_${key}">
+                    ${columnasDisponibles[key]}
+                </label>
+            </div>
+        `;
+        container.appendChild(col);
+    });
+}
+
+// Seleccionar todas las columnas
+function seleccionarTodasColumnas() {
+    document.querySelectorAll('.columna-check').forEach(checkbox => {
+        checkbox.checked = true;
+    });
+}
+
+// Seleccionar columnas por defecto
+function seleccionarColumnasDefecto() {
+    document.querySelectorAll('.columna-check').forEach(checkbox => {
+        checkbox.checked = columnasDefecto.includes(checkbox.value);
+    });
+}
+
+// Deseleccionar todas las columnas
+function deseleccionarTodasColumnas() {
+    document.querySelectorAll('.columna-check').forEach(checkbox => {
+        checkbox.checked = false;
+    });
+}
+
+// Ejecutar exportación
+function ejecutarExportacion() {
+    // Obtener columnas seleccionadas
+    const columnasSeleccionadas = [];
+    document.querySelectorAll('.columna-check:checked').forEach(checkbox => {
+        columnasSeleccionadas.push(checkbox.value);
+    });
+
+    if (columnasSeleccionadas.length === 0) {
+        alert('Debes seleccionar al menos una columna para exportar');
+        return;
+    }
+
+    // Obtener tipo de exportación
+    const tipoExportacion = document.querySelector('input[name="tipoExportacion"]:checked').value;
+
+    // Construir URL con parámetros de filtros actuales
+    const urlParams = new URLSearchParams(window.location.search);
+    urlParams.set('columnas', columnasSeleccionadas.join(','));
+
+    let url;
+    if (tipoExportacion === 'pdf') {
+        url = '{{ route("incidencias.exportar-pdf") }}?' + urlParams.toString();
+    } else {
+        url = '{{ route("incidencias.exportar-excel") }}?' + urlParams.toString();
+    }
+
+    // Descargar archivo
+    window.location.href = url;
+
+    // Cerrar modal
+    setTimeout(() => {
+        bootstrap.Modal.getInstance(document.getElementById('modalExportacion')).hide();
+    }, 500);
+}
 </script>
+
 @endpush
 
 @push('styles')
@@ -638,5 +948,84 @@ document.addEventListener('DOMContentLoaded', function() {
     border-top-right-radius: 0.375rem;
     border-bottom-right-radius: 0.375rem;
 }
+
 </style>
+
+<!-- Modal para Asignación Rápida de Área -->
+<div class="modal fade" id="modalAsignarArea" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="formAsignarArea" method="POST">
+                @csrf
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="fas fa-share me-2"></i>Asignar Área Responsable</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="incidenciaId" name="incidencia_id">
+
+                    <div class="alert alert-info">
+                        <strong>Incidencia:</strong> <span id="incidenciaTitulo"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="areaActual" class="form-label">Área Actual</label>
+                        <input type="text" class="form-control" id="areaActual" readonly>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="area_nueva" class="form-label">Nueva Área Responsable <span class="text-danger">*</span></label>
+                        <select class="form-select" id="area_nueva" name="area_nueva" required>
+                            <option value="">Seleccione un área</option>
+                            <option value="ingenieria">Ingeniería</option>
+                            <option value="laboratorio">Laboratorio</option>
+                            <option value="logistica">Logística</option>
+                            <option value="operaciones">Operaciones</option>
+                            <option value="administracion">Administración</option>
+                            <option value="contabilidad">Contabilidad</option>
+                            <option value="iglesia_local">Iglesia Local</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="observaciones" class="form-label">Observaciones (Opcional)</label>
+                        <textarea class="form-control" id="observaciones" name="observaciones" rows="3"
+                                  placeholder="Agregue observaciones si lo desea"
+                                  maxlength="500"></textarea>
+                        <small class="text-muted">Máximo 500 caracteres</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i> Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-check"></i> Asignar Área
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function abrirModalAsignarArea(incidenciaId, titulo, areaActual) {
+    // Establecer valores en el modal
+    document.getElementById('incidenciaId').value = incidenciaId;
+    document.getElementById('incidenciaTitulo').textContent = titulo;
+    document.getElementById('areaActual').value = areaActual || 'Sin asignar';
+
+    // Establecer la acción del formulario
+    const form = document.getElementById('formAsignarArea');
+    form.action = `/incidencias/${incidenciaId}/transferir`;
+
+    // Limpiar campos
+    document.getElementById('area_nueva').value = '';
+    document.getElementById('observaciones').value = '';
+
+    // Abrir modal
+    const modal = new bootstrap.Modal(document.getElementById('modalAsignarArea'));
+    modal.show();
+}
+</script>
 @endpush

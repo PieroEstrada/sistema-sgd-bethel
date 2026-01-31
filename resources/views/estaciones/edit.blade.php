@@ -234,11 +234,18 @@
                             </div>
                             
                             <div class="col-md-3">
-                                <label for="presbyter_id" class="form-label">Presbítero ID</label>
-                                <input type="number" class="form-control @error('presbyter_id') is-invalid @enderror" 
-                                       id="presbyter_id" name="presbyter_id" value="{{ old('presbyter_id', $estacion->presbyter_id) }}" 
-                                       placeholder="Ej: 1001" min="1">
-                                @error('presbyter_id')
+                                <label for="presbitero_id" class="form-label">Presbiterio/Pastor</label>
+                                <select class="form-control @error('presbitero_id') is-invalid @enderror"
+                                        id="presbitero_id" name="presbitero_id">
+                                    <option value="">Sin asignar</option>
+                                    @foreach($presbiteros ?? [] as $presbitero)
+                                        <option value="{{ $presbitero->id }}"
+                                            {{ old('presbitero_id', $estacion->presbitero_id) == $presbitero->id ? 'selected' : '' }}>
+                                            {{ $presbitero->codigo }} - {{ $presbitero->nombre_completo }} ({{ $presbitero->sector }})
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('presbitero_id')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>

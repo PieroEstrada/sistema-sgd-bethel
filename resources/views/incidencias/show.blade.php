@@ -30,10 +30,16 @@
                         <i class="fas fa-edit me-2"></i>Editar
                     </a>
                     @endif
-                    <button type="button" class="btn btn-success me-2" 
+                    <button type="button" class="btn btn-success me-2"
                             onclick="cambiarEstadoRapido('{{ $incidencia->id }}', '{{ $incidencia->codigo_incidencia }}')">
                         <i class="fas fa-tasks me-2"></i>Cambiar Estado
                     </button>
+                    @if($permisos['puede_transferir'] ?? false)
+                    <button type="button" class="btn btn-warning me-2"
+                            data-bs-toggle="modal" data-bs-target="#modalTransferir">
+                        <i class="fas fa-exchange-alt me-2"></i>Transferir
+                    </button>
+                    @endif
                     <a href="{{ route('incidencias.index') }}" class="btn btn-secondary">
                         <i class="fas fa-arrow-left me-2"></i>Volver a Lista
                     </a>
@@ -198,7 +204,37 @@
                         <div class="col-sm-8">{{ $incidencia->asignado_a }}</div>
                     </div>
                     @endif
-                    
+
+                    @if($incidencia->area_responsable_actual)
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Área Responsable:</strong></div>
+                        <div class="col-sm-8">
+                            <span class="badge bg-primary">{{ $incidencia->area_responsable_actual }}</span>
+                            @if($incidencia->contador_transferencias > 0)
+                                <small class="text-muted ms-2">
+                                    ({{ $incidencia->contador_transferencias }} {{ $incidencia->contador_transferencias === 1 ? 'transferencia' : 'transferencias' }})
+                                </small>
+                            @endif
+                        </div>
+                    </div>
+                    @endif
+
+                    @if($incidencia->responsableActual)
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Responsable Actual:</strong></div>
+                        <div class="col-sm-8">
+                            {{ $incidencia->responsableActual->name }}
+                            <small class="text-muted">({{ $incidencia->responsableActual->rol->getLabel() }})</small>
+                            @if($incidencia->fecha_ultima_transferencia)
+                                <br><small class="text-muted">
+                                    Desde: {{ $incidencia->fecha_ultima_transferencia->format('d/m/Y H:i') }}
+                                    ({{ $incidencia->fecha_ultima_transferencia->diffForHumans() }})
+                                </small>
+                            @endif
+                        </div>
+                    </div>
+                    @endif
+
                     @if($incidencia->fecha_inicio_atencion)
                     <div class="row mb-3">
                         <div class="col-sm-4"><strong>Inicio de Atención:</strong></div>
@@ -272,31 +308,74 @@
         <!-- Panel Lateral -->
         <div class="col-lg-4">
             <!-- Historial de Cambios -->
-            @if($historial && $historial->count() > 0)
+            @if($incidencia->historial && $incidencia->historial->count() > 0)
             <div class="card shadow mb-4">
-                <div class="card-header py-3">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
                     <h6 class="m-0 font-weight-bold text-primary">Historial de Cambios</h6>
+                    <span class="badge bg-primary">{{ $incidencia->historial->count() }} eventos</span>
                 </div>
-                <div class="card-body">
+                <div class="card-body" style="max-height: 600px; overflow-y: auto;">
                     <div class="timeline">
-                        @foreach($historial as $evento)
+                        @foreach($incidencia->historial as $registro)
                         <div class="timeline-item mb-3 pb-3 {{ !$loop->last ? 'border-bottom' : '' }}">
                             <div class="d-flex">
                                 <div class="timeline-marker me-3">
-                                    <i class="fas fa-{{ $evento['tipo'] == 'creacion' ? 'plus-circle text-info' : ($evento['tipo'] == 'atencion' ? 'play-circle text-warning' : 'check-circle text-success') }}"></i>
+                                    <i class="fas fa-{{ $registro->tipo_accion_icono }} text-{{ $registro->tipo_accion_color }}"></i>
                                 </div>
                                 <div class="timeline-content flex-grow-1">
-                                    <h6 class="mb-1">{{ $evento['accion'] }}</h6>
-                                    <p class="mb-1 text-muted">{{ $evento['descripcion'] }}</p>
-                                    <small class="text-muted">
-                                        <i class="fas fa-user me-1"></i>{{ $evento['usuario'] }} • 
-                                        <i class="fas fa-clock me-1"></i>{{ $evento['fecha']->format('d/m/Y H:i') }}
+                                    <h6 class="mb-1">{{ $registro->tipo_accion_label }}</h6>
+                                    <p class="mb-1 small">{{ $registro->descripcion_cambio }}</p>
+
+                                    @if($registro->observaciones)
+                                    <div class="alert alert-light p-2 mb-2 small">
+                                        <i class="fas fa-comment-dots me-1"></i>
+                                        <strong>Observaciones:</strong> {{ $registro->observaciones }}
+                                    </div>
+                                    @endif
+
+                                    @if($registro->tipo_accion === 'cambio_estado')
+                                    <small class="d-block mb-1">
+                                        <span class="badge bg-secondary">{{ ucfirst($registro->estado_anterior) }}</span>
+                                        <i class="fas fa-arrow-right mx-1"></i>
+                                        <span class="badge bg-success">{{ ucfirst($registro->estado_nuevo) }}</span>
+                                    </small>
+                                    @endif
+
+                                    @if($registro->tipo_accion === 'transferencia_area')
+                                    <small class="d-block mb-1">
+                                        <i class="fas fa-building me-1"></i>
+                                        <strong>De:</strong> {{ ucfirst($registro->area_anterior ?? 'Sin asignar') }}
+                                        <i class="fas fa-arrow-right mx-1"></i>
+                                        <strong>A:</strong> {{ ucfirst($registro->area_nueva) }}
+                                    </small>
+                                    @if($registro->responsableNuevo)
+                                    <small class="d-block">
+                                        <i class="fas fa-user me-1"></i>
+                                        <strong>Responsable:</strong> {{ $registro->responsableNuevo->name }}
+                                    </small>
+                                    @endif
+                                    @endif
+
+                                    <small class="text-muted d-block mt-2">
+                                        <i class="fas fa-user me-1"></i>{{ $registro->usuarioAccion->name ?? 'Sistema' }} •
+                                        <i class="fas fa-clock me-1"></i>{{ $registro->created_at->format('d/m/Y H:i') }}
+                                        <span class="text-muted">({{ $registro->created_at->diffForHumans() }})</span>
                                     </small>
                                 </div>
                             </div>
                         </div>
                         @endforeach
                     </div>
+                </div>
+            </div>
+            @else
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Historial de Cambios</h6>
+                </div>
+                <div class="card-body text-center text-muted">
+                    <i class="fas fa-history fa-3x mb-3 opacity-50"></i>
+                    <p>No hay historial de cambios registrado</p>
                 </div>
             </div>
             @endif
@@ -324,8 +403,8 @@
                     @else
                     <div class="alert alert-success alert-sm">
                         <i class="fas fa-check-circle me-2"></i>
-                        <strong>Incidencia Resuelta</strong><br>
-                        <small>Cerrada exitosamente.</small>
+                        <strong>Incidencia Finalizada</strong><br>
+                        <small>Finalizada exitosamente.</small>
                     </div>
                     @endif
                 </div>
@@ -353,7 +432,9 @@
                             <option value="">Seleccionar estado</option>
                             <option value="abierta" {{ $incidencia->estado->value == 'abierta' ? 'disabled' : '' }}>Abierta</option>
                             <option value="en_proceso" {{ $incidencia->estado->value == 'en_proceso' ? 'disabled' : '' }}>En Proceso</option>
-                            <option value="cerrada" {{ $incidencia->estado->value == 'cerrada' ? 'disabled' : '' }}>Cerrada</option>
+                            <option value="resuelta" {{ $incidencia->estado->value == 'resuelta' ? 'disabled' : '' }}>Resuelta</option>
+                            <option value="cerrada" {{ $incidencia->estado->value == 'cerrada' ? 'disabled' : '' }}>Finalizado</option>
+                            <option value="informativo" {{ $incidencia->estado->value == 'informativo' ? 'disabled' : '' }}>Informativo</option>
                             <option value="cancelada" {{ $incidencia->estado->value == 'cancelada' ? 'disabled' : '' }}>Cancelada</option>
                         </select>
                         <small class="form-text text-muted">Estado actual: {{ $incidencia->estado->name }}</small>
@@ -374,6 +455,124 @@
         </div>
     </div>
 </div>
+
+<!-- Modal para Transferir Responsabilidad -->
+@if($permisos['puede_transferir'] ?? false)
+<div class="modal fade" id="modalTransferir" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" action="{{ route('incidencias.transferir', $incidencia) }}">
+            @csrf
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-exchange-alt me-2"></i>
+                        Transferir Responsabilidad
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Información actual -->
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Información Actual
+                        </h6>
+                        <div class="row">
+                            <div class="col-6">
+                                <strong>Área:</strong><br>
+                                {{ $incidencia->area_responsable_actual ?? 'No asignada' }}
+                            </div>
+                            <div class="col-6">
+                                <strong>Responsable:</strong><br>
+                                {{ $incidencia->responsableActual->name ?? 'No asignado' }}
+                            </div>
+                        </div>
+                        @if($incidencia->contador_transferencias > 0)
+                        <hr class="my-2">
+                        <small class="text-muted">
+                            <i class="fas fa-history me-1"></i>
+                            Esta incidencia ha sido transferida {{ $incidencia->contador_transferencias }} {{ $incidencia->contador_transferencias === 1 ? 'vez' : 'veces' }}
+                            @if($incidencia->fecha_ultima_transferencia)
+                                (última: {{ $incidencia->fecha_ultima_transferencia->diffForHumans() }})
+                            @endif
+                        </small>
+                        @endif
+                    </div>
+
+                    <!-- Formulario de transferencia -->
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Área Destino <span class="text-danger">*</span>
+                        </label>
+                        <select name="area_nueva" class="form-select" required>
+                            <option value="">Seleccione el área destino...</option>
+                            <option value="ingenieria">Ingeniería</option>
+                            <option value="laboratorio">Laboratorio</option>
+                            <option value="logistica">Logística</option>
+                            <option value="operaciones">Operaciones</option>
+                            <option value="administracion">Administración</option>
+                            <option value="contabilidad">Contabilidad</option>
+                            <option value="iglesia_local">Iglesia Local</option>
+                        </select>
+                        <small class="form-text text-muted">
+                            Seleccione el área que se hará cargo de la incidencia
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Nuevo Responsable (Opcional)</label>
+                        <select name="responsable_nuevo_id" class="form-select">
+                            <option value="">Sin asignar específicamente</option>
+                            @foreach($usuariosTransferencia as $usuario)
+                                <option value="{{ $usuario->id }}">
+                                    {{ $usuario->name }} - {{ $usuario->rol->getLabel() }}
+                                    @if($usuario->sector_asignado)
+                                        ({{ $usuario->sector_asignado }})
+                                    @endif
+                                </option>
+                            @endforeach
+                        </select>
+                        <small class="form-text text-muted">
+                            Puede asignar un responsable específico o dejarlo sin asignar
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">
+                            Observaciones / Motivo de Transferencia <span class="text-danger">*</span>
+                        </label>
+                        <textarea name="observaciones"
+                                  class="form-control"
+                                  rows="4"
+                                  required
+                                  placeholder="Explique el motivo de la transferencia (mínimo 10 caracteres)..."></textarea>
+                        <small class="form-text text-muted">
+                            Mínimo 10 caracteres, máximo 500. Esta información quedará registrada en el historial.
+                        </small>
+                    </div>
+
+                    <!-- Advertencia -->
+                    <div class="alert alert-warning mb-0">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        <strong>Importante:</strong> Esta acción quedará registrada en el historial de la incidencia.
+                        @if($incidencia->responsable_actual_user_id || $incidencia->asignado_a_user_id)
+                            Se notificará automáticamente al nuevo responsable asignado.
+                        @endif
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i> Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-exchange-alt me-1"></i> Transferir Responsabilidad
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+@endif
 @endsection
 
 @push('scripts')

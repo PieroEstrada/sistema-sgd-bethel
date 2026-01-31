@@ -137,10 +137,10 @@
                         </div>
 
                         <div class="row mb-3">
-                            <div class="col-md-4">
-                                <label for="prioridad" class="form-label">Prioridad <span class="text-danger">*</span></label>
-                                <select class="form-control @error('prioridad') is-invalid @enderror" 
-                                        id="prioridad" name="prioridad" required>
+                            <div class="col-md-3">
+                                <label for="prioridad" class="form-label">Prioridad <span class="text-danger" id="prioridadReq">*</span></label>
+                                <select class="form-control @error('prioridad') is-invalid @enderror"
+                                        id="prioridad" name="prioridad">
                                     <option value="">Seleccionar prioridad</option>
                                     @foreach($prioridades as $key => $value)
                                         <option value="{{ $key }}" {{ old('prioridad') == $key ? 'selected' : '' }}>
@@ -152,10 +152,10 @@
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
-                            
-                            <div class="col-md-4">
+
+                            <div class="col-md-3">
                                 <label for="categoria" class="form-label">Categoría <span class="text-danger">*</span></label>
-                                <select class="form-control @error('categoria') is-invalid @enderror" 
+                                <select class="form-control @error('categoria') is-invalid @enderror"
                                         id="categoria" name="categoria" required>
                                     <option value="">Seleccionar categoría</option>
                                     @foreach($categorias as $key => $value)
@@ -168,10 +168,10 @@
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
-                            
-                            <div class="col-md-4">
-                                <label for="impacto_servicio" class="form-label">Impacto en el Servicio <span class="text-danger">*</span></label>
-                                <select class="form-control @error('impacto_servicio') is-invalid @enderror" 
+
+                            <div class="col-md-3">
+                                <label for="impacto_servicio" class="form-label">Impacto <span class="text-danger">*</span></label>
+                                <select class="form-control @error('impacto_servicio') is-invalid @enderror"
                                         id="impacto_servicio" name="impacto_servicio" required>
                                     <option value="">Seleccionar impacto</option>
                                     <option value="bajo" {{ old('impacto_servicio') == 'bajo' ? 'selected' : '' }}>Bajo</option>
@@ -179,6 +179,25 @@
                                     <option value="alto" {{ old('impacto_servicio') == 'alto' ? 'selected' : '' }}>Alto</option>
                                 </select>
                                 @error('impacto_servicio')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+                            <div class="col-md-3">
+                                <label for="area_responsable" class="form-label">Área Responsable</label>
+                                <select class="form-control @error('area_responsable') is-invalid @enderror"
+                                        id="area_responsable" name="area_responsable">
+                                    <option value="">Sin asignar</option>
+                                    <option value="ingenieria" {{ old('area_responsable') == 'ingenieria' ? 'selected' : '' }}>Ingeniería</option>
+                                    <option value="laboratorio" {{ old('area_responsable') == 'laboratorio' ? 'selected' : '' }}>Laboratorio</option>
+                                    <option value="logistica" {{ old('area_responsable') == 'logistica' ? 'selected' : '' }}>Logística</option>
+                                    <option value="operaciones" {{ old('area_responsable') == 'operaciones' ? 'selected' : '' }}>Operaciones</option>
+                                    <option value="administracion" {{ old('area_responsable') == 'administracion' ? 'selected' : '' }}>Administración</option>
+                                    <option value="contabilidad" {{ old('area_responsable') == 'contabilidad' ? 'selected' : '' }}>Contabilidad</option>
+                                    <option value="iglesia_local" {{ old('area_responsable') == 'iglesia_local' ? 'selected' : '' }}>Iglesia Local</option>
+                                </select>
+                                <small class="form-text text-muted">Opcional. Si no se asigna, queda como "Abierta"</small>
+                                @error('area_responsable')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
@@ -338,6 +357,30 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // Manejar categoría informativa
+    const categoriaSelect = document.getElementById('categoria');
+    if (categoriaSelect) {
+        categoriaSelect.addEventListener('change', function() {
+            const prioridadField = document.getElementById('prioridad');
+            const infoAlert = document.getElementById('alertaInformativa');
+
+            if (this.value === 'informativa') {
+                // Mostrar alerta informativa
+                if (!infoAlert) {
+                    const alert = document.createElement('div');
+                    alert.id = 'alertaInformativa';
+                    alert.className = 'alert alert-info mt-2';
+                    alert.innerHTML = '<i class="fas fa-info-circle me-2"></i><strong>Nota:</strong> Las incidencias informativas se crean automáticamente como <strong>Finalizadas</strong> (solo registro/documentación).';
+                    this.parentNode.appendChild(alert);
+                }
+            } else {
+                // Ocultar alerta
+                const alert = document.getElementById('alertaInformativa');
+                if (alert) alert.remove();
+            }
+        });
+    }
+
     // Validación adicional del formulario
     const form = document.querySelector('form');
     if (form) {
@@ -349,14 +392,17 @@ document.addEventListener('DOMContentLoaded', function() {
             const categoria = document.getElementById('categoria').value;
             const impactoServicio = document.getElementById('impacto_servicio').value;
             const reportadoUserId = document.getElementById('reportado_por_user_id').value;
-            
-            if (!estacionId || !descripcionCorta || !descripcionDetallada || 
-                !prioridad || !categoria || !impactoServicio || !reportadoUserId) {
+
+            // Para incidencias informativas, la prioridad no es obligatoria
+            const prioridadRequerida = categoria !== 'informativa';
+
+            if (!estacionId || !descripcionCorta || !descripcionDetallada ||
+                (prioridadRequerida && !prioridad) || !categoria || !impactoServicio || !reportadoUserId) {
                 e.preventDefault();
                 alert('Por favor completa todos los campos obligatorios marcados con *');
                 return;
             }
-            
+
             if (descripcionDetallada.length < 20) {
                 e.preventDefault();
                 alert('La descripción detallada debe tener al menos 20 caracteres.');
@@ -462,10 +508,11 @@ function mostrarModalBuscarUsuarios() {
                                 <select class="form-control" id="filterRol">
                                     <option value="">Todos los roles</option>
                                     <option value="administrador">Administrador</option>
-                                    <option value="gerente">Gerente</option>
-                                    <option value="jefe_estacion">Jefe de Estación</option>
-                                    <option value="operador">Operador</option>
-                                    <option value="consulta">Consulta</option>
+                                    <option value="sectorista">Sectorista</option>
+                                    <option value="encargado_ingenieria">Enc. Ingeniería</option>
+                                    <option value="encargado_laboratorio">Enc. Laboratorio</option>
+                                    <option value="coordinador_operaciones">Coord. Operaciones</option>
+                                    <option value="encargado_logistico">Enc. Logístico</option>
                                 </select>
                             </div>
                         </div>

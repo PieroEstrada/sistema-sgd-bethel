@@ -11,6 +11,8 @@ use App\Enums\EstadoEstacion;
 use App\Enums\TipoMedio;
 use App\Enums\Sector;
 use App\Enums\Banda;
+use App\Enums\NivelFA;
+use App\Enums\RiesgoLicencia;
 
 class Estacion extends Model
 {
@@ -20,6 +22,7 @@ class Estacion extends Model
 
     protected $fillable = [
         'codigo',
+        'station_external_id',
         'razon_social',
         'localidad',
         'provincia',
@@ -27,40 +30,75 @@ class Estacion extends Model
         'banda',
         'frecuencia',
         'canal_tv',
-        'presbyter_id',
+        'presbitero_id',
         'estado',
         'potencia_watts',
         'sector',
         'latitud',
         'longitud',
+        'coordenadas_gms',
         'jefe_estacion_id',
         'celular_encargado',
         'fecha_autorizacion',
         'fecha_vencimiento_autorizacion',
         'observaciones',
         'activa',
-        'ultima_actualizacion_estado'
+        'ultima_actualizacion_estado',
+        // Campos de renovación
+        'en_renovacion',
+        'fecha_inicio_renovacion',
+        'fecha_estimada_fin_renovacion',
+        // Campos FA (Fuera del Aire)
+        'responsable_fa',
+        'nivel_fa',
+        'presupuesto_fa',
+        'presupuesto_dolares',
+        'diagnostico_fa',
+        'fecha_salida_aire',
+        // Campos de licencia
+        'licencia_vencimiento',
+        'licencia_rvm',
+        'licencia_riesgo',
+        'licencia_meses_restantes',
+        'licencia_situacion',
     ];
 
     protected $casts = [
         'banda' => Banda::class,
         'estado' => EstadoEstacion::class,
         'sector' => Sector::class,
+        'nivel_fa' => NivelFA::class,
         'frecuencia' => 'decimal:1',
         'potencia_watts' => 'integer',
-        'presbyter_id' => 'integer',
+        'presbitero_id' => 'integer',
         'latitud' => 'decimal:6',
         'longitud' => 'decimal:6',
         'fecha_autorizacion' => 'date',
         'fecha_vencimiento_autorizacion' => 'date',
         'activa' => 'boolean',
-        'ultima_actualizacion_estado' => 'datetime'
+        'ultima_actualizacion_estado' => 'datetime',
+        // Nuevos casts
+        'en_renovacion' => 'boolean',
+        'fecha_inicio_renovacion' => 'date',
+        'fecha_estimada_fin_renovacion' => 'date',
+        'presupuesto_fa' => 'decimal:2',
+        'presupuesto_dolares' => 'decimal:2',
+        'fecha_salida_aire' => 'date',
+        // Campos de licencia
+        'licencia_vencimiento' => 'date',
+        'licencia_riesgo' => RiesgoLicencia::class,
+        'licencia_meses_restantes' => 'integer',
     ];
 
     // Relaciones
     public function jefeEstacion()
     {
         return $this->belongsTo(User::class, 'jefe_estacion_id');
+    }
+
+    public function presbitero()
+    {
+        return $this->belongsTo(Presbitero::class, 'presbitero_id');
     }
 
     public function incidencias()
@@ -83,6 +121,21 @@ class Estacion extends Model
         return $this->hasMany(Carpeta::class);
     }
 
+    public function historialEstados()
+    {
+        return $this->hasMany(EstacionHistorialEstado::class)->orderBy('fecha_cambio', 'desc');
+    }
+
+    public function equipamientos()
+    {
+        return $this->hasMany(EstacionEquipamiento::class);
+    }
+
+    public function tickets()
+    {
+        return $this->hasMany(Ticket::class);
+    }
+
     // public function informesEconomicos()
     // {
     //     return $this->hasMany(InformeEconomico::class);
@@ -102,6 +155,31 @@ class Estacion extends Model
     public function scopePorEstado($query, EstadoEstacion $estado)
     {
         return $query->where('estado', $estado);
+    }
+
+    public function scopePorRiesgoLicencia($query, RiesgoLicencia $riesgo)
+    {
+        return $query->where('licencia_riesgo', $riesgo);
+    }
+
+    public function scopeRiesgoAlto($query)
+    {
+        return $query->where('licencia_riesgo', RiesgoLicencia::ALTO);
+    }
+
+    public function scopeRiesgoMedio($query)
+    {
+        return $query->where('licencia_riesgo', RiesgoLicencia::MEDIO);
+    }
+
+    public function scopeRiesgoSeguro($query)
+    {
+        return $query->where('licencia_riesgo', RiesgoLicencia::SEGURO);
+    }
+
+    public function scopeConLicenciaVencida($query)
+    {
+        return $query->where('licencia_meses_restantes', '<', 0);
     }
 
     public function scopePorDepartamento($query, string $departamento)
@@ -173,10 +251,7 @@ class Estacion extends Model
         return $this->estado === EstadoEstacion::FUERA_DEL_AIRE;
     }
 
-    public function estaEnMantenimiento(): bool
-    {
-        return $this->estado === EstadoEstacion::MANTENIMIENTO;
-    }
+    // estaEnMantenimiento eliminado - MANTENIMIENTO ya no es un estado válido
 
     public function noEstaInstalada(): bool
     {
@@ -202,7 +277,6 @@ class Estacion extends Model
         return match($this->estado) {
             EstadoEstacion::AL_AIRE => 'success',
             EstadoEstacion::FUERA_DEL_AIRE => 'danger',
-            EstadoEstacion::MANTENIMIENTO => 'warning',
             EstadoEstacion::NO_INSTALADA => 'secondary',
             default => 'primary'
         };
@@ -213,20 +287,51 @@ class Estacion extends Model
         return match($this->estado) {
             EstadoEstacion::AL_AIRE => 'fas fa-broadcast-tower text-success',
             EstadoEstacion::FUERA_DEL_AIRE => 'fas fa-exclamation-triangle text-danger',
-            EstadoEstacion::MANTENIMIENTO => 'fas fa-tools text-warning',
             EstadoEstacion::NO_INSTALADA => 'fas fa-clock text-secondary',
             default => 'fas fa-radio text-primary'
         };
     }
 
     // Método para actualizar estado con histórico
-    public function actualizarEstado(EstadoEstacion $nuevoEstado, string $motivo = null): void
+    public function actualizarEstado(EstadoEstacion $nuevoEstado, string $motivo = null, string $observaciones = null): void
     {
         $estadoAnterior = $this->estado;
-        
-        $this->update([
+
+        // No hacer nada si el estado es el mismo
+        if ($estadoAnterior === $nuevoEstado) {
+            return;
+        }
+
+        // Actualizar estado
+        $updateData = [
             'estado' => $nuevoEstado,
             'ultima_actualizacion_estado' => now()
+        ];
+
+        // Si sale del aire, registrar la fecha
+        if ($nuevoEstado === EstadoEstacion::FUERA_DEL_AIRE) {
+            $updateData['fecha_salida_aire'] = now();
+        }
+
+        // Si vuelve al aire, limpiar campos FA
+        if ($nuevoEstado === EstadoEstacion::AL_AIRE && $estadoAnterior === EstadoEstacion::FUERA_DEL_AIRE) {
+            $updateData['responsable_fa'] = null;
+            $updateData['nivel_fa'] = null;
+            $updateData['presupuesto_fa'] = null;
+            $updateData['diagnostico_fa'] = null;
+            $updateData['fecha_salida_aire'] = null;
+        }
+
+        $this->update($updateData);
+
+        // Registrar en historial
+        $this->historialEstados()->create([
+            'estado_anterior' => $estadoAnterior?->value,
+            'estado_nuevo' => $nuevoEstado->value,
+            'fecha_cambio' => now(),
+            'motivo' => $motivo,
+            'responsable_cambio_id' => Auth::id(),
+            'observaciones' => $observaciones,
         ]);
 
         // Crear registro de incidencia automática si cambió a fuera del aire
@@ -234,12 +339,47 @@ class Estacion extends Model
             $this->incidencias()->create([
                 'titulo' => 'Estación fuera del aire',
                 'descripcion' => $motivo ?? 'Cambio automático de estado a fuera del aire',
+                'tipo' => 'FALLAS',
                 'prioridad' => 'alta',
                 'estado' => 'abierta',
                 'reportado_por' => Auth::id(),
                 'fecha_reporte' => now()
             ]);
         }
+    }
+
+    // Helpers para FA
+    public function getDiasFueraDelAireAttribute(): ?int
+    {
+        if ($this->estado !== EstadoEstacion::FUERA_DEL_AIRE || !$this->fecha_salida_aire) {
+            return null;
+        }
+        return $this->fecha_salida_aire->diffInDays(now());
+    }
+
+    public function getPresupuestoFaFormateadoAttribute(): ?string
+    {
+        if (!$this->presupuesto_fa) {
+            return null;
+        }
+        return 'S/ ' . number_format($this->presupuesto_fa, 2);
+    }
+
+    // Helpers para equipamiento
+    public function tieneEquipamientoAveriado(): bool
+    {
+        return $this->equipamientos()
+            ->where('estado', 'AVERIADO')
+            ->exists();
+    }
+
+    public function getEquipamientoResumenAttribute(): array
+    {
+        return $this->equipamientos()
+            ->selectRaw('estado, count(*) as total')
+            ->groupBy('estado')
+            ->pluck('total', 'estado')
+            ->toArray();
     }
 
     // Validaciones de negocio

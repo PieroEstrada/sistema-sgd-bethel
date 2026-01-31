@@ -14,8 +14,12 @@ class EstacionSeeder extends Seeder
 {
     public function run()
     {
-        // Obtener jefes de estación para asignar
-        $jefesEstacion = User::where('rol', RolUsuario::JEFE_ESTACION)->get();
+        // Obtener usuarios que pueden ser responsables de estaciones
+        // (coordinador_operaciones es quien gestiona estaciones ahora)
+        $responsablesEstaciones = User::whereIn('rol', [
+            RolUsuario::COORDINADOR_OPERACIONES->value,
+            RolUsuario::ADMINISTRADOR->value,
+        ])->get();
         
         // Estaciones extraídas del PDF con coordenadas reales de Perú
         $estaciones = [
@@ -28,7 +32,7 @@ class EstacionSeeder extends Seeder
                 'departamento' => 'Cajamarca',
                 'banda' => Banda::FM,
                 'frecuencia' => 94.9,
-                'presbyter_id' => 26,
+                // 'presbitero_id' => 26,
                 'estado' => EstadoEstacion::FUERA_DEL_AIRE,
                 'potencia_watts' => 250,
                 'sector' => Sector::NORTE,
@@ -47,7 +51,7 @@ class EstacionSeeder extends Seeder
                 'departamento' => 'Cajamarca',
                 'banda' => Banda::VHF,
                 'canal_tv' => 4,
-                'presbyter_id' => 26,
+                // 'presbitero_id' => 26,
                 'estado' => EstadoEstacion::AL_AIRE,
                 'potencia_watts' => 250,
                 'sector' => Sector::NORTE,
@@ -65,7 +69,7 @@ class EstacionSeeder extends Seeder
                 'departamento' => 'Ancash',
                 'banda' => Banda::FM,
                 'frecuencia' => 104.5,
-                'presbyter_id' => 95,
+                // 'presbitero_id' => 95,
                 'estado' => EstadoEstacion::AL_AIRE,
                 'potencia_watts' => 50,
                 'sector' => Sector::NORTE,
@@ -85,7 +89,7 @@ class EstacionSeeder extends Seeder
                 'departamento' => 'Ancash',
                 'banda' => Banda::FM,
                 'frecuencia' => 104.9,
-                'presbyter_id' => 59,
+                // 'presbitero_id' => 59,
                 'estado' => EstadoEstacion::NO_INSTALADA,
                 'potencia_watts' => 250,
                 'sector' => Sector::CENTRO,
@@ -102,7 +106,7 @@ class EstacionSeeder extends Seeder
                 'departamento' => 'Lima',
                 'banda' => Banda::VHF,
                 'canal_tv' => 6,
-                'presbyter_id' => 85,
+                // 'presbitero_id' => 85,
                 'estado' => EstadoEstacion::AL_AIRE,
                 'potencia_watts' => 500,
                 'sector' => Sector::CENTRO,
@@ -120,7 +124,7 @@ class EstacionSeeder extends Seeder
                 'departamento' => 'Ancash',
                 'banda' => Banda::FM,
                 'frecuencia' => 98.9,
-                'presbyter_id' => 113,
+                // 'presbitero_id' => 113,
                 'estado' => EstadoEstacion::AL_AIRE,
                 'potencia_watts' => 150,
                 'sector' => Sector::CENTRO,
@@ -138,7 +142,7 @@ class EstacionSeeder extends Seeder
                 'departamento' => 'Lima',
                 'banda' => Banda::FM,
                 'frecuencia' => 102.1,
-                'presbyter_id' => 1,
+                // 'presbitero_id' => 1,
                 'estado' => EstadoEstacion::AL_AIRE,
                 'potencia_watts' => 1000,
                 'sector' => Sector::CENTRO,
@@ -158,7 +162,7 @@ class EstacionSeeder extends Seeder
                 'departamento' => 'Apurímac',
                 'banda' => Banda::FM,
                 'frecuencia' => 97.9,
-                'presbyter_id' => 67,
+                // 'presbitero_id' => 67,
                 'estado' => EstadoEstacion::AL_AIRE,
                 'potencia_watts' => 500,
                 'sector' => Sector::SUR,
@@ -176,7 +180,7 @@ class EstacionSeeder extends Seeder
                 'departamento' => 'Apurímac',
                 'banda' => Banda::VHF,
                 'canal_tv' => 7,
-                'presbyter_id' => 67,
+                // 'presbitero_id' => 67,
                 'estado' => EstadoEstacion::AL_AIRE,
                 'potencia_watts' => 50,
                 'sector' => Sector::SUR,
@@ -194,7 +198,7 @@ class EstacionSeeder extends Seeder
                 'departamento' => 'Arequipa',
                 'banda' => Banda::FM,
                 'frecuencia' => 91.7,
-                'presbyter_id' => 40,
+                // 'presbitero_id' => 40,
                 'estado' => EstadoEstacion::FUERA_DEL_AIRE,
                 'potencia_watts' => 250,
                 'sector' => Sector::SUR,
@@ -213,7 +217,7 @@ class EstacionSeeder extends Seeder
                 'departamento' => 'Arequipa',
                 'banda' => Banda::UHF,
                 'canal_tv' => 21,
-                'presbyter_id' => 40,
+                // 'presbitero_id' => 40,
                 'estado' => EstadoEstacion::AL_AIRE,
                 'potencia_watts' => 150,
                 'sector' => Sector::SUR,
@@ -231,7 +235,7 @@ class EstacionSeeder extends Seeder
                 'departamento' => 'Arequipa',
                 'banda' => Banda::FM,
                 'frecuencia' => 95.3,
-                'presbyter_id' => 2,
+                // 'presbitero_id' => 2,
                 'estado' => EstadoEstacion::AL_AIRE,
                 'potencia_watts' => 500,
                 'sector' => Sector::SUR,
@@ -249,7 +253,7 @@ class EstacionSeeder extends Seeder
                 'departamento' => 'Cusco',
                 'banda' => Banda::AM,
                 'frecuencia' => 1170,
-                'presbyter_id' => 3,
+                // 'presbitero_id' => 3,
                 'estado' => EstadoEstacion::AL_AIRE,
                 'potencia_watts' => 1000,
                 'sector' => Sector::SUR,
@@ -269,7 +273,7 @@ class EstacionSeeder extends Seeder
                 'departamento' => 'La Libertad',
                 'banda' => Banda::FM,
                 'frecuencia' => 98.5,
-                'presbyter_id' => 4,
+                // 'presbitero_id' => 4,
                 'estado' => EstadoEstacion::AL_AIRE,
                 'potencia_watts' => 500,
                 'sector' => Sector::NORTE,
@@ -287,7 +291,7 @@ class EstacionSeeder extends Seeder
                 'departamento' => 'Piura',
                 'banda' => Banda::FM,
                 'frecuencia' => 103.7,
-                'presbyter_id' => 5,
+                // 'presbitero_id' => 5,
                 'estado' => EstadoEstacion::AL_AIRE,
                 'potencia_watts' => 300,
                 'sector' => Sector::NORTE,
@@ -305,8 +309,8 @@ class EstacionSeeder extends Seeder
                 'departamento' => 'Ica',
                 'banda' => Banda::FM,
                 'frecuencia' => 96.1,
-                'presbyter_id' => 6,
-                'estado' => EstadoEstacion::MANTENIMIENTO,
+                // 'presbitero_id' => 6,
+                'estado' => EstadoEstacion::FUERA_DEL_AIRE,
                 'potencia_watts' => 250,
                 'sector' => Sector::CENTRO,
                 'latitud' => -14.0678,
@@ -324,7 +328,7 @@ class EstacionSeeder extends Seeder
                 'departamento' => 'Junín',
                 'banda' => Banda::FM,
                 'frecuencia' => 92.3,
-                'presbyter_id' => 7,
+                // 'presbitero_id' => 7,
                 'estado' => EstadoEstacion::AL_AIRE,
                 'potencia_watts' => 400,
                 'sector' => Sector::CENTRO,
@@ -342,7 +346,7 @@ class EstacionSeeder extends Seeder
                 'departamento' => 'Puno',
                 'banda' => Banda::FM,
                 'frecuencia' => 89.7,
-                'presbyter_id' => 8,
+                // 'presbitero_id' => 8,
                 'estado' => EstadoEstacion::AL_AIRE,
                 'potencia_watts' => 300,
                 'sector' => Sector::SUR,
@@ -360,7 +364,7 @@ class EstacionSeeder extends Seeder
                 'departamento' => 'Tacna',
                 'banda' => Banda::FM,
                 'frecuencia' => 100.9,
-                'presbyter_id' => 9,
+                // 'presbitero_id' => 9,
                 'estado' => EstadoEstacion::AL_AIRE,
                 'potencia_watts' => 250,
                 'sector' => Sector::SUR,
@@ -372,13 +376,15 @@ class EstacionSeeder extends Seeder
             ]
         ];
 
-        // Crear las estaciones y asignar jefes
+        // Crear las estaciones
         foreach ($estaciones as $index => $estacionData) {
-            // Asignar jefe de estación rotativo
-            $jefe = $jefesEstacion[$index % $jefesEstacion->count()];
-            $estacionData['jefe_estacion_id'] = $jefe->id;
+            // Asignar responsable de estación rotativo (si hay usuarios disponibles)
+            if ($responsablesEstaciones->count() > 0) {
+                $responsable = $responsablesEstaciones[$index % $responsablesEstaciones->count()];
+                $estacionData['jefe_estacion_id'] = $responsable->id;
+            }
             $estacionData['ultima_actualizacion_estado'] = now()->subDays(rand(0, 30));
-            
+
             Estacion::create($estacionData);
         }
 

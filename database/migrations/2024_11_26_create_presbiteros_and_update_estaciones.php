@@ -19,7 +19,7 @@ return new class extends Migration
                 $table->string('nombre_completo')->comment('Nombre completo del presbítero');
                 $table->string('celular', 20)->nullable()->comment('Número de celular');
                 $table->string('email')->nullable()->comment('Correo electrónico');
-                $table->string('sector')->comment('Sector asignado (NORTE, CENTRO, SUR, ORIENTE)');
+                $table->string('sector')->comment('Sector asignado (NORTE, CENTRO, SUR)');
                 $table->date('fecha_ordenacion')->nullable()->comment('Fecha de ordenación como presbítero');
                 $table->text('iglesias_asignadas')->nullable()->comment('Lista de iglesias a su cargo');
                 $table->enum('estado', ['activo', 'inactivo', 'licencia'])->default('activo');

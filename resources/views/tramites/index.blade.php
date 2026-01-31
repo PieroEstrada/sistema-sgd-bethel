@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Trámites MTC - Sistema SGD Bethel')
+@section('title', 'Tramites MTC - Sistema SGD Bethel')
 
 @section('content')
 <div class="container-fluid">
@@ -8,43 +8,44 @@
     <nav aria-label="breadcrumb" class="mb-4">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
-            <li class="breadcrumb-item active">Trámites MTC</li>
+            <li class="breadcrumb-item active">Tramites MTC</li>
         </ol>
     </nav>
 
     <!-- Encabezado -->
     <div class="row mb-4">
         <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex justify-content-between align-items-center flex-wrap">
                 <div>
                     <h1 class="h3 mb-0 text-gray-800">
                         <i class="fas fa-file-alt text-primary me-2"></i>
-                        Gestión de Trámites MTC
+                        Gestion de Tramites MTC
                     </h1>
-                    <p class="text-muted">Administración de trámites ante el Ministerio de Transportes y Comunicaciones</p>
+                    <p class="text-muted mb-0">Administracion de tramites ante el Ministerio de Transportes y Comunicaciones</p>
                 </div>
-                <div>
-                    <a href="{{ route('tramites.create') }}" class="btn btn-primary">
-                        <i class="fas fa-plus me-2"></i>Nuevo Trámite
-                    </a>
+                <div class="mt-2 mt-md-0">
+                    <div class="btn-group">
+                        <a href="{{ route('tramites.create', ['origen' => 'tupa_digital']) }}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>TUPA Digital
+                        </a>
+                        <a href="{{ route('tramites.create', ['origen' => 'mesa_partes']) }}" class="btn btn-info">
+                            <i class="fas fa-plus me-2"></i>Mesa de Partes
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Estadísticas -->
+    <!-- Estadisticas -->
     <div class="row mb-4">
         <div class="col-xl-2 col-md-4 mb-4">
             <div class="card border-left-primary shadow h-100 py-2 hover-card">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                Total Trámites
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                {{ $estadisticas['total'] }}
-                            </div>
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $estadisticas['total'] }}</div>
                         </div>
                         <div class="col-auto">
                             <i class="fas fa-file-alt fa-2x text-gray-300"></i>
@@ -59,15 +60,11 @@
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                                Presentados
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                {{ $estadisticas['presentados'] }}
-                            </div>
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">TUPA Digital</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $estadisticas['tupa_digital'] ?? 0 }}</div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-file-upload fa-2x text-gray-300"></i>
+                            <i class="fas fa-laptop fa-2x text-gray-300"></i>
                         </div>
                     </div>
                 </div>
@@ -79,15 +76,11 @@
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                En Proceso
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                {{ $estadisticas['en_proceso'] }}
-                            </div>
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">En Proceso</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $estadisticas['en_proceso'] }}</div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-cog fa-2x text-gray-300"></i>
+                            <i class="fas fa-clock fa-2x text-gray-300"></i>
                         </div>
                     </div>
                 </div>
@@ -99,12 +92,8 @@
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                Aprobados
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                {{ $estadisticas['aprobados'] }}
-                            </div>
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Aprobados</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $estadisticas['aprobados'] }}</div>
                         </div>
                         <div class="col-auto">
                             <i class="fas fa-check-circle fa-2x text-gray-300"></i>
@@ -119,88 +108,120 @@
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
-                                Rechazados
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                {{ $estadisticas['rechazados'] }}
-                            </div>
+                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Vencidos</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $estadisticas['vencidos'] }}</div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-times-circle fa-2x text-gray-300"></i>
+                            <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
+        @if(($estadisticas['silencio_positivo'] ?? 0) > 0)
         <div class="col-xl-2 col-md-4 mb-4">
-            <div class="card border-left-secondary shadow h-100 py-2 hover-card">
+            <div class="card border-left-success shadow h-100 py-2 hover-card" style="border-left-color: #28a745 !important;">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">
-                                Vencidos
-                            </div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                {{ $estadisticas['vencidos'] }}
-                            </div>
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Silencio (+)</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $estadisticas['silencio_positivo'] }}</div>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-clock fa-2x text-gray-300"></i>
+                            <i class="fas fa-thumbs-up fa-2x text-gray-300"></i>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+        @endif
     </div>
 
     <!-- Filtros -->
     <div class="card shadow mb-4">
         <div class="card-header py-3">
-            <h6 class="m-0 font-weight-bold text-primary">Filtros de Búsqueda</h6>
+            <h6 class="m-0 font-weight-bold text-primary">
+                <i class="fas fa-filter me-2"></i>Filtros de Busqueda
+            </h6>
         </div>
         <div class="card-body">
             <form method="GET" action="{{ route('tramites.index') }}">
                 <div class="row">
                     <div class="col-md-3 mb-3">
-                        <label class="form-label small">Buscar expediente o estación</label>
-                        <input type="text" name="buscar" class="form-control" 
-                               placeholder="Nº expediente o estación..." value="{{ request('buscar') }}">
+                        <label class="form-label small">Buscar</label>
+                        <input type="text" name="buscar" class="form-control"
+                               placeholder="Expediente, oficio, estacion, codigo TUPA..." value="{{ request('buscar') }}">
                     </div>
+
                     <div class="col-md-2 mb-3">
-                        <label class="form-label small">Tipo de Trámite</label>
-                        <select name="tipo_tramite" class="form-control">
-                            <option value="">Todos los tipos</option>
-                            @foreach($tipos_tramite as $tipo)
-                                <option value="{{ $tipo['value'] }}" {{ request('tipo_tramite') == $tipo['value'] ? 'selected' : '' }}>
-                                    {{ $tipo['label'] }}
+                        <label class="form-label small">Origen</label>
+                        <select name="origen" class="form-control" id="filtroOrigen">
+                            <option value="">Todos los origenes</option>
+                            <option value="tupa_digital" {{ request('origen') == 'tupa_digital' ? 'selected' : '' }}>TUPA Digital</option>
+                            <option value="mesa_partes" {{ request('origen') == 'mesa_partes' ? 'selected' : '' }}>Mesa de Partes</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-2 mb-3">
+                        <label class="form-label small">Clasificacion</label>
+                        <select name="clasificacion_id" class="form-control">
+                            <option value="">Todas</option>
+                            @foreach($clasificaciones as $clasif)
+                                <option value="{{ $clasif['value'] }}" {{ request('clasificacion_id') == $clasif['value'] ? 'selected' : '' }}>
+                                    {{ $clasif['label'] }}
                                 </option>
                             @endforeach
                         </select>
                     </div>
+
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label small">Tipo de Tramite</label>
+                        <select name="tipo_tramite_id" class="form-control" id="filtroTipoTramite">
+                            <option value="">Todos los tipos</option>
+                            <optgroup label="TUPA Digital">
+                                @foreach($tiposTramite['tupa_digital'] ?? [] as $tipo)
+                                    <option value="{{ $tipo['value'] }}" {{ request('tipo_tramite_id') == $tipo['value'] ? 'selected' : '' }}>
+                                        {{ $tipo['label'] }}
+                                    </option>
+                                @endforeach
+                            </optgroup>
+                            <optgroup label="Mesa de Partes">
+                                @foreach($tiposTramite['mesa_partes'] ?? [] as $tipo)
+                                    <option value="{{ $tipo['value'] }}" {{ request('tipo_tramite_id') == $tipo['value'] ? 'selected' : '' }}>
+                                        {{ $tipo['label'] }}
+                                    </option>
+                                @endforeach
+                            </optgroup>
+                        </select>
+                    </div>
+
                     <div class="col-md-2 mb-3">
                         <label class="form-label small">Estado</label>
-                        <select name="estado" class="form-control">
-                            <option value="">Todos los estados</option>
+                        <select name="estado_id" class="form-control">
+                            <option value="">Todos</option>
                             @foreach($estados as $estado)
-                                <option value="{{ $estado['value'] }}" {{ request('estado') == $estado['value'] ? 'selected' : '' }}>
+                                <option value="{{ $estado['value'] }}" {{ request('estado_id') == $estado['value'] ? 'selected' : '' }}>
                                     {{ $estado['label'] }}
                                 </option>
                             @endforeach
                         </select>
                     </div>
+                </div>
+
+                <div class="row">
                     <div class="col-md-2 mb-3">
-                        <label class="form-label small">Estación</label>
+                        <label class="form-label small">Estacion</label>
                         <select name="estacion_id" class="form-control">
-                            <option value="">Todas las estaciones</option>
+                            <option value="">Todas</option>
                             @foreach($estaciones as $estacion)
                                 <option value="{{ $estacion->id }}" {{ request('estacion_id') == $estacion->id ? 'selected' : '' }}>
-                                    {{ $estacion->localidad }} - {{ $estacion->razon_social }}
+                                    {{ $estacion->localidad }} - {{ Str::limit($estacion->razon_social, 20) }}
                                 </option>
                             @endforeach
                         </select>
                     </div>
+
                     <div class="col-md-2 mb-3">
                         <label class="form-label small">Responsable</label>
                         <select name="responsable_id" class="form-control">
@@ -212,25 +233,32 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-1 mb-3">
-                        <label class="form-label small">Vencidos</label>
-                        <div class="form-check">
-                            <input type="checkbox" name="mostrar_vencidos" value="1" 
-                                   class="form-check-input" {{ request('mostrar_vencidos') == '1' ? 'checked' : '' }}>
-                            <label class="form-check-label small">Solo vencidos</label>
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
+
                     <div class="col-md-2 mb-3">
                         <label class="form-label small">Fecha Desde</label>
                         <input type="date" name="fecha_desde" class="form-control" value="{{ request('fecha_desde') }}">
                     </div>
+
                     <div class="col-md-2 mb-3">
                         <label class="form-label small">Fecha Hasta</label>
                         <input type="date" name="fecha_hasta" class="form-control" value="{{ request('fecha_hasta') }}">
                     </div>
-                    <div class="col-md-8 mb-3 d-flex align-items-end">
+
+                    <div class="col-md-2 mb-3">
+                        <label class="form-label small">Opciones</label>
+                        <div class="form-check">
+                            <input type="checkbox" name="mostrar_vencidos" value="1" class="form-check-input"
+                                   {{ request('mostrar_vencidos') == '1' ? 'checked' : '' }} id="chkVencidos">
+                            <label class="form-check-label small" for="chkVencidos">Solo vencidos</label>
+                        </div>
+                        <div class="form-check">
+                            <input type="checkbox" name="silencio_positivo" value="1" class="form-check-input"
+                                   {{ request('silencio_positivo') == '1' ? 'checked' : '' }} id="chkSilencio">
+                            <label class="form-check-label small" for="chkSilencio">Silencio (+)</label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-2 mb-3 d-flex align-items-end">
                         <button type="submit" class="btn btn-primary me-2">
                             <i class="fas fa-search me-1"></i>Filtrar
                         </button>
@@ -243,15 +271,23 @@
         </div>
     </div>
 
-    <!-- Tabla de Trámites -->
+    <!-- Tabla de Tramites -->
     <div class="card shadow">
-        <div class="card-header py-3">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
             <h6 class="m-0 font-weight-bold text-primary">
-                Lista de Trámites MTC
+                Lista de Tramites MTC
                 @if($tramites->total() > 0)
-                    <span class="badge bg-secondary ms-2">{{ $tramites->total() }} trámite(s)</span>
+                    <span class="badge bg-secondary ms-2">{{ $tramites->total() }} tramite(s)</span>
                 @endif
             </h6>
+            <div>
+                <a href="{{ route('tramites.exportar-excel', request()->query()) }}" class="btn btn-sm btn-success">
+                    <i class="fas fa-file-excel me-1"></i>Excel
+                </a>
+                <a href="{{ route('tramites.exportar-pdf', request()->query()) }}" class="btn btn-sm btn-danger">
+                    <i class="fas fa-file-pdf me-1"></i>PDF
+                </a>
+            </div>
         </div>
         <div class="card-body">
             <div class="table-responsive">
@@ -259,93 +295,113 @@
                     <thead>
                         <tr>
                             <th>Expediente</th>
-                            <th>Tipo de Trámite</th>
-                            <th>Estación</th>
+                            <th>Tipo / Origen</th>
+                            <th>Estacion</th>
                             <th>Estado</th>
-                            <th>Fecha Presentación</th>
-                            <th>Días Transcurridos</th>
-                            <th>Documentos</th>
+                            <th>Fechas</th>
+                            <th>Dias</th>
+                            <th>Doc.</th>
                             <th>Responsable</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($tramites as $tramite)
-                        <tr class="hover-row {{ $tramite->estaVencido() ? 'table-danger' : '' }}">
+                        <tr class="hover-row {{ $tramite->estaVencido() ? 'table-danger' : '' }} {{ $tramite->aplicaSilencioPositivo() ? 'table-success' : '' }}">
                             <td>
                                 <strong>{{ $tramite->numero_expediente }}</strong>
+                                @if($tramite->codigo_tupa)
+                                    <br><span class="badge bg-primary">{{ $tramite->codigo_tupa }}</span>
+                                @endif
+                                @if($tramite->tramite_padre_id)
+                                    <br><small class="text-info"><i class="fas fa-link"></i> Vinculado</small>
+                                @endif
                                 @if($tramite->estaVencido())
                                     <br><span class="badge bg-danger"><i class="fas fa-exclamation-triangle"></i> VENCIDO</span>
                                 @endif
+                                @if($tramite->aplicaSilencioPositivo())
+                                    <br><span class="badge bg-success"><i class="fas fa-thumbs-up"></i> SILENCIO (+)</span>
+                                @endif
                             </td>
                             <td>
-                                <span class="badge bg-{{ $tramite->tipo_tramite->getColor() }}">
-                                    <i class="{{ $tramite->tipo_tramite->getIcon() }} me-1"></i>
-                                    {{ $tramite->tipo_tramite->getLabel() }}
-                                </span>
+                                @if($tramite->tipoTramite)
+                                    <span class="badge bg-{{ $tramite->tipoTramite->color }}" title="{{ $tramite->tipoTramite->descripcion }}">
+                                        <i class="{{ $tramite->tipoTramite->icono }} me-1"></i>
+                                        {{ Str::limit($tramite->tipoTramite->nombre, 25) }}
+                                    </span>
+                                    <br>
+                                    <small class="badge bg-{{ $tramite->tipoTramite->origen_color }}">
+                                        {{ $tramite->tipoTramite->origen == 'tupa_digital' ? 'TUPA' : 'MPV' }}
+                                    </small>
+                                @else
+                                    <span class="badge bg-secondary">{{ $tramite->tipo_tramite ?? 'N/A' }}</span>
+                                @endif
                             </td>
                             <td>
-                                <strong>{{ $tramite->estacion->localidad }}</strong><br>
-                                <small class="text-muted">{{ $tramite->estacion->razon_social }}</small>
+                                @if($tramite->estacion)
+                                    <strong>{{ $tramite->estacion->localidad }}</strong><br>
+                                    <small class="text-muted">{{ Str::limit($tramite->estacion->razon_social, 25) }}</small>
+                                @else
+                                    <span class="text-muted">Sin estacion</span>
+                                @endif
                             </td>
                             <td>
-                                <span class="badge bg-{{ $tramite->estado->getColor() }}">
-                                    <i class="{{ $tramite->estado->getIcon() }} me-1"></i>
-                                    {{ $tramite->estado->getLabel() }}
-                                </span>
+                                @if($tramite->estadoActual)
+                                    <span class="badge bg-{{ $tramite->estadoActual->color }}">
+                                        <i class="{{ $tramite->estadoActual->icono }} me-1"></i>
+                                        {{ $tramite->estadoActual->nombre }}
+                                    </span>
+                                @else
+                                    <span class="badge bg-secondary">{{ $tramite->estado ?? 'N/A' }}</span>
+                                @endif
                             </td>
                             <td>
-                                {{ $tramite->fecha_presentacion->format('d/m/Y') }}
+                                @if($tramite->fecha_presentacion)
+                                    <small><strong>Pres:</strong> {{ $tramite->fecha_presentacion->format('d/m/Y') }}</small>
+                                @endif
+                                @if($tramite->fecha_vencimiento)
+                                    <br><small class="text-{{ $tramite->estaVencido() ? 'danger' : 'muted' }}">
+                                        <strong>Venc:</strong> {{ $tramite->fecha_vencimiento->format('d/m/Y') }}
+                                    </small>
+                                @endif
                                 @if($tramite->fecha_respuesta)
                                     <br><small class="text-success">
-                                        <i class="fas fa-check-circle"></i> 
-                                        Resp: {{ $tramite->fecha_respuesta->format('d/m/Y') }}
+                                        <i class="fas fa-check-circle"></i> {{ $tramite->fecha_respuesta->format('d/m/Y') }}
                                     </small>
                                 @endif
                             </td>
-                            <td>
-                                <strong>{{ $tramite->dias_transcurridos }}</strong> días
-                                @if($tramite->fecha_vencimiento)
-                                    <br><small class="text-muted">
-                                        Vence: {{ $tramite->fecha_vencimiento->format('d/m/Y') }}
+                            <td class="text-center">
+                                <strong>{{ $tramite->dias_transcurridos }}</strong>
+                                @if($tramite->dias_para_vencimiento !== null)
+                                    <br><small class="text-{{ $tramite->dias_para_vencimiento < 0 ? 'danger' : ($tramite->dias_para_vencimiento < 7 ? 'warning' : 'muted') }}">
+                                        {{ $tramite->dias_para_vencimiento < 0 ? 'Vencido' : $tramite->dias_para_vencimiento . 'd' }}
                                     </small>
                                 @endif
                             </td>
-                            <td>
-                                @php
-                                    $porcentaje = $tramite->porcentaje_completud;
-                                    $colorBarra = $porcentaje >= 75 ? 'success' : ($porcentaje >= 50 ? 'warning' : 'danger');
-                                @endphp
-                                <div class="progress" style="height: 20px;">
-                                    <div class="progress-bar bg-{{ $colorBarra }}" role="progressbar" 
-                                         style="width: {{ $porcentaje }}%;" 
-                                         aria-valuenow="{{ $porcentaje }}" aria-valuemin="0" aria-valuemax="100">
-                                        {{ $porcentaje }}%
-                                    </div>
-                                </div>
-                                <small class="text-muted">
-                                    {{ count($tramite->documentos_presentados ?? []) }} / 
-                                    {{ count($tramite->documentos_requeridos ?? []) }} docs
-                                </small>
+                            <td class="text-center">
+                                @if($tramite->documento_principal_nombre)
+                                    <a href="{{ Storage::url($tramite->documento_principal_ruta) }}" target="_blank" title="{{ $tramite->documento_principal_nombre }}">
+                                        <i class="fas fa-file-pdf fa-lg text-danger"></i>
+                                    </a>
+                                @else
+                                    <i class="fas fa-file fa-lg text-muted" title="Sin documento"></i>
+                                @endif
                             </td>
                             <td>
-                                <small>{{ $tramite->responsable->name }}</small>
+                                <small>{{ $tramite->responsable->name ?? 'N/A' }}</small>
                             </td>
                             <td>
-                                <div class="btn-group" role="group">
-                                    <a href="{{ route('tramites.show', $tramite) }}" 
-                                       class="btn btn-sm btn-outline-primary" title="Ver detalles">
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{{ route('tramites.show', $tramite) }}" class="btn btn-outline-primary" title="Ver detalles">
                                         <i class="fas fa-eye"></i>
                                     </a>
                                     @if($tramite->puedeSerEditado())
-                                        <a href="{{ route('tramites.edit', $tramite) }}" 
-                                           class="btn btn-sm btn-outline-warning" title="Editar">
+                                        <a href="{{ route('tramites.edit', $tramite) }}" class="btn btn-outline-warning" title="Editar">
                                             <i class="fas fa-edit"></i>
                                         </a>
                                     @endif
-                                    <button type="button" 
-                                            class="btn btn-sm btn-outline-info" 
-                                            onclick="abrirModalCambiarEstado({{ $tramite->id }}, '{{ $tramite->numero_expediente }}', '{{ $tramite->estado->value }}')"
+                                    <button type="button" class="btn btn-outline-info"
+                                            onclick="abrirModalCambiarEstado({{ $tramite->id }}, '{{ $tramite->numero_expediente }}')"
                                             title="Cambiar estado">
                                         <i class="fas fa-exchange-alt"></i>
                                     </button>
@@ -354,9 +410,12 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="9" class="text-center text-muted">
+                            <td colspan="9" class="text-center text-muted py-5">
                                 <i class="fas fa-file-alt fa-3x mb-3 opacity-50"></i>
-                                <p>No se encontraron trámites con los filtros aplicados.</p>
+                                <p>No se encontraron tramites con los filtros aplicados.</p>
+                                <a href="{{ route('tramites.create') }}" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-plus me-1"></i>Crear nuevo tramite
+                                </a>
                             </td>
                         </tr>
                         @endforelse
@@ -364,12 +423,9 @@
                 </table>
             </div>
 
-            <!-- Paginación -->
             @if($tramites->hasPages())
             <div class="d-flex justify-content-center mt-4">
-                <nav aria-label="Paginación de trámites">
-                    {{ $tramites->appends(request()->query())->links() }}
-                </nav>
+                {{ $tramites->appends(request()->query())->links() }}
             </div>
             @endif
         </div>
@@ -378,55 +434,52 @@
 
 <!-- Modal Cambiar Estado -->
 <div class="modal fade" id="modalCambiarEstado" tabindex="-1" aria-labelledby="modalCambiarEstadoLabel" aria-hidden="true">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="modalCambiarEstadoLabel">
                     <i class="fas fa-exchange-alt text-info me-2"></i>
-                    Cambiar Estado del Trámite
+                    Cambiar Estado del Tramite
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             <div class="modal-body">
-                <form id="formCambiarEstado">
-                    <input type="hidden" id="tramiteId" name="tramite_id">
-                    
-                    <div class="mb-3">
-                        <label class="form-label"><strong>Expediente:</strong></label>
-                        <p id="tramiteExpediente" class="text-primary"></p>
-                    </div>
+                <div class="mb-3">
+                    <label class="form-label"><strong>Expediente:</strong></label>
+                    <p id="tramiteExpediente" class="text-primary fw-bold"></p>
+                </div>
 
-                    <div class="mb-3">
-                        <label class="form-label"><strong>Estado Actual:</strong></label>
-                        <p id="estadoActual"></p>
-                    </div>
+                <div class="mb-3">
+                    <label class="form-label"><strong>Estado Actual:</strong></label>
+                    <div id="estadoActualBadge"></div>
+                </div>
 
-                    <div class="mb-3">
-                        <label for="nuevoEstado" class="form-label">Nuevo Estado <span class="text-danger">*</span></label>
-                        <select class="form-control" id="nuevoEstado" name="nuevo_estado" required>
-                            <option value="">Seleccione un estado</option>
-                            @foreach($estados as $estado)
-                                <option value="{{ $estado['value'] }}">{{ $estado['label'] }}</option>
-                            @endforeach
-                        </select>
+                <div class="mb-3">
+                    <label class="form-label"><strong>Estados Disponibles:</strong></label>
+                    <div id="estadosDisponibles" class="d-flex flex-wrap gap-2">
+                        <!-- Se llena dinamicamente -->
+                    </div>
+                </div>
+
+                <input type="hidden" id="tramiteId">
+                <input type="hidden" id="nuevoEstadoId">
+
+                <div id="camposAdicionales" style="display: none;">
+                    <hr>
+                    <div class="mb-3" id="divComentario">
+                        <label for="comentario" class="form-label">Comentario / Observaciones</label>
+                        <textarea class="form-control" id="comentario" rows="3" placeholder="Ingrese comentarios..."></textarea>
                     </div>
 
                     <div class="mb-3" id="divResolucion" style="display: none;">
-                        <label for="resolucion" class="form-label">Resolución</label>
-                        <input type="text" class="form-control" id="resolucion" name="resolucion" 
-                               placeholder="Ej: RD Nº9827-2023">
+                        <label for="resolucion" class="form-label">Numero de Resolucion</label>
+                        <input type="text" class="form-control" id="resolucion" placeholder="Ej: RD N 9827-2023-MTC/28">
                     </div>
-
-                    <div class="mb-3">
-                        <label for="comentario" class="form-label">Comentario / Observaciones</label>
-                        <textarea class="form-control" id="comentario" name="comentario" rows="3" 
-                                  placeholder="Ingrese comentarios adicionales..."></textarea>
-                    </div>
-                </form>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary" onclick="guardarCambioEstado()">
+                <button type="button" class="btn btn-primary" id="btnGuardarEstado" onclick="guardarCambioEstado()" disabled>
                     <i class="fas fa-save me-1"></i>Guardar Cambio
                 </button>
             </div>
@@ -441,146 +494,174 @@
         transition: all 0.3s ease;
         cursor: pointer;
     }
-
     .hover-card:hover {
         transform: translateY(-5px);
         box-shadow: 0 0.5rem 2rem 0 rgba(58, 59, 69, 0.25) !important;
     }
-
     .border-left-primary { border-left: 0.25rem solid #4e73df !important; }
     .border-left-success { border-left: 0.25rem solid #1cc88a !important; }
     .border-left-danger { border-left: 0.25rem solid #e74a3b !important; }
     .border-left-warning { border-left: 0.25rem solid #f6c23e !important; }
     .border-left-info { border-left: 0.25rem solid #36b9cc !important; }
     .border-left-secondary { border-left: 0.25rem solid #858796 !important; }
-    
+
     .table th {
         border-top: none;
         font-weight: 600;
         background-color: #f8f9fc;
-        font-size: 0.875rem;
+        font-size: 0.8rem;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
     }
-    
-    .hover-row {
+    .hover-row { transition: all 0.2s ease; }
+    .hover-row:hover { background-color: rgba(78, 115, 223, 0.05); }
+    .badge { font-size: 0.7rem; font-weight: 500; }
+    .table-danger { background-color: rgba(231, 74, 59, 0.1) !important; }
+    .table-success { background-color: rgba(28, 200, 138, 0.1) !important; }
+
+    .estado-btn {
+        cursor: pointer;
         transition: all 0.2s ease;
     }
-    
-    .hover-row:hover {
-        background-color: rgba(78, 115, 223, 0.05);
+    .estado-btn:hover {
+        transform: scale(1.05);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     }
-    
-    .badge {
-        font-size: 0.75rem;
-        font-weight: 500;
-        padding: 0.375rem 0.75rem;
-    }
-
-    .table-danger {
-        background-color: rgba(231, 74, 59, 0.1) !important;
-    }
-
-    .progress {
-        background-color: #e9ecef;
-    }
-
-    .btn-group .btn {
-        margin: 0 1px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    
-    .btn-group .btn:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    .estado-btn.selected {
+        box-shadow: 0 0 0 3px rgba(0,123,255,0.5);
     }
 </style>
 @endpush
 
 @push('scripts')
 <script>
-// Abrir modal para cambiar estado
-function abrirModalCambiarEstado(tramiteId, expediente, estadoActual) {
+let tramiteActualId = null;
+let estadoSeleccionado = null;
+let estadosData = [];
+
+function abrirModalCambiarEstado(tramiteId, expediente) {
+    tramiteActualId = tramiteId;
     document.getElementById('tramiteId').value = tramiteId;
     document.getElementById('tramiteExpediente').textContent = expediente;
-    document.getElementById('estadoActual').innerHTML = `<span class="badge bg-secondary">${estadoActual}</span>`;
-    
-    // Resetear formulario
-    document.getElementById('formCambiarEstado').reset();
-    document.getElementById('tramiteId').value = tramiteId;
-    document.getElementById('divResolucion').style.display = 'none';
-    
+    document.getElementById('estadosDisponibles').innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div> Cargando...';
+    document.getElementById('camposAdicionales').style.display = 'none';
+    document.getElementById('btnGuardarEstado').disabled = true;
+    estadoSeleccionado = null;
+
+    // Cargar estados posibles via AJAX
+    fetch(`/tramites-mtc/${tramiteId}/estados-posibles`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                estadosData = data.estados;
+
+                // Mostrar estado actual
+                if (data.estado_actual) {
+                    document.getElementById('estadoActualBadge').innerHTML = `<span class="badge bg-secondary">${data.estado_actual.nombre}</span>`;
+                }
+
+                // Mostrar estados disponibles como botones
+                let html = '';
+                if (data.estados.length === 0) {
+                    html = '<p class="text-muted">No hay transiciones disponibles desde el estado actual.</p>';
+                } else {
+                    data.estados.forEach(estado => {
+                        html += `
+                            <button type="button" class="btn btn-outline-${estado.color} estado-btn"
+                                    data-estado-id="${estado.id}"
+                                    data-requiere-comentario="${estado.requiere_comentario}"
+                                    data-requiere-resolucion="${estado.requiere_resolucion}"
+                                    onclick="seleccionarEstado(this, ${estado.id})">
+                                <i class="${estado.icono} me-1"></i>
+                                ${estado.nombre}
+                            </button>
+                        `;
+                    });
+                }
+                document.getElementById('estadosDisponibles').innerHTML = html;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('estadosDisponibles').innerHTML = '<p class="text-danger">Error al cargar estados</p>';
+        });
+
     const modal = new bootstrap.Modal(document.getElementById('modalCambiarEstado'));
     modal.show();
 }
 
-// Mostrar campo de resolución si se aprueba o rechaza
-document.getElementById('nuevoEstado')?.addEventListener('change', function() {
-    const divResolucion = document.getElementById('divResolucion');
-    if (this.value === 'aprobado' || this.value === 'rechazado') {
-        divResolucion.style.display = 'block';
+function seleccionarEstado(btn, estadoId) {
+    // Quitar seleccion anterior
+    document.querySelectorAll('.estado-btn').forEach(b => b.classList.remove('selected', 'btn-primary'));
+    document.querySelectorAll('.estado-btn').forEach(b => {
+        const color = b.className.match(/btn-outline-(\w+)/);
+        if (color) b.className = b.className;
+    });
+
+    // Seleccionar nuevo
+    btn.classList.add('selected');
+    estadoSeleccionado = estadoId;
+    document.getElementById('nuevoEstadoId').value = estadoId;
+    document.getElementById('btnGuardarEstado').disabled = false;
+
+    // Mostrar campos adicionales si es necesario
+    const requiereComentario = btn.dataset.requiereComentario === 'true' || btn.dataset.requiereComentario === '1';
+    const requiereResolucion = btn.dataset.requiereResolucion === 'true' || btn.dataset.requiereResolucion === '1';
+
+    if (requiereComentario || requiereResolucion) {
+        document.getElementById('camposAdicionales').style.display = 'block';
+        document.getElementById('divResolucion').style.display = requiereResolucion ? 'block' : 'none';
     } else {
-        divResolucion.style.display = 'none';
+        document.getElementById('camposAdicionales').style.display = 'block';
+        document.getElementById('divResolucion').style.display = 'none';
     }
-});
+}
 
-// Guardar cambio de estado
 function guardarCambioEstado() {
-    const tramiteId = document.getElementById('tramiteId').value;
-    const nuevoEstado = document.getElementById('nuevoEstado').value;
-    const comentario = document.getElementById('comentario').value;
-    const resolucion = document.getElementById('resolucion').value;
-
-    if (!nuevoEstado) {
-        alert('Por favor seleccione un nuevo estado');
+    if (!estadoSeleccionado) {
+        alert('Por favor seleccione un estado');
         return;
     }
 
-    // Mostrar loading
-    const btnGuardar = event.target;
+    const btnGuardar = document.getElementById('btnGuardarEstado');
     const originalText = btnGuardar.innerHTML;
     btnGuardar.disabled = true;
     btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Guardando...';
 
-    fetch(`/tramites-mtc/${tramiteId}/cambiar-estado`, {
+    const datos = {
+        nuevo_estado_id: estadoSeleccionado,
+        comentario: document.getElementById('comentario').value,
+        resolucion: document.getElementById('resolucion').value
+    };
+
+    fetch(`/tramites-mtc/${tramiteActualId}/cambiar-estado`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
         },
-        body: JSON.stringify({
-            nuevo_estado: nuevoEstado,
-            comentario: comentario,
-            resolucion: resolucion
-        })
+        body: JSON.stringify(datos)
     })
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Cerrar modal
             const modal = bootstrap.Modal.getInstance(document.getElementById('modalCambiarEstado'));
             modal.hide();
-            
-            // Recargar página con mensaje de éxito
             window.location.reload();
         } else {
-            alert('Error al cambiar el estado: ' + (data.message || 'Error desconocido'));
+            alert('Error: ' + (data.mensaje || 'Error desconocido'));
             btnGuardar.disabled = false;
             btnGuardar.innerHTML = originalText;
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Error al cambiar el estado del trámite');
+        alert('Error al cambiar el estado');
         btnGuardar.disabled = false;
         btnGuardar.innerHTML = originalText;
     });
 }
 
-// Inicialización
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Página de trámites MTC cargada correctamente');
-    
     // Inicializar tooltips
     const tooltipTriggerList = [].slice.call(document.querySelectorAll('[title]'));
     tooltipTriggerList.map(function (tooltipTriggerEl) {

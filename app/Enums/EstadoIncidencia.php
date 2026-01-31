@@ -9,6 +9,7 @@ enum EstadoIncidencia: string
     case RESUELTA = 'resuelta';
     case CERRADA = 'cerrada';
     case CANCELADA = 'cancelada';
+    case INFORMATIVO = 'informativo';
 
     public function getLabel(): string
     {
@@ -16,8 +17,9 @@ enum EstadoIncidencia: string
             self::ABIERTA => 'Abierta',
             self::EN_PROCESO => 'En Proceso',
             self::RESUELTA => 'Resuelta',
-            self::CERRADA => 'Cerrada',
+            self::CERRADA => 'Finalizado',
             self::CANCELADA => 'Cancelada',
+            self::INFORMATIVO => 'Informativo',
         };
     }
 
@@ -27,8 +29,9 @@ enum EstadoIncidencia: string
             self::ABIERTA => 'Incidencia reportada, pendiente de asignación',
             self::EN_PROCESO => 'Incidencia asignada y en proceso de resolución',
             self::RESUELTA => 'Incidencia resuelta, pendiente de cierre',
-            self::CERRADA => 'Incidencia completamente cerrada',
+            self::CERRADA => 'Incidencia finalizada y cerrada',
             self::CANCELADA => 'Incidencia cancelada por ser duplicada o inválida',
+            self::INFORMATIVO => 'Registro informativo o de seguimiento, no requiere resolución',
         };
     }
 
@@ -40,6 +43,7 @@ enum EstadoIncidencia: string
             self::RESUELTA => 'success',
             self::CERRADA => 'secondary',
             self::CANCELADA => 'dark',
+            self::INFORMATIVO => 'light',
         };
     }
 
@@ -51,6 +55,7 @@ enum EstadoIncidencia: string
             self::RESUELTA => 'fas fa-check-circle',
             self::CERRADA => 'fas fa-lock',
             self::CANCELADA => 'fas fa-times-circle',
+            self::INFORMATIVO => 'fas fa-info-circle',
         };
     }
 
@@ -72,17 +77,22 @@ enum EstadoIncidencia: string
 
     public function estaFinalizada(): bool
     {
-        return in_array($this, [self::RESUELTA, self::CERRADA, self::CANCELADA]);
+        return in_array($this, [self::RESUELTA, self::CERRADA, self::CANCELADA, self::INFORMATIVO]);
     }
 
     public function puedeSerEditada(): bool
     {
-        return in_array($this, [self::ABIERTA, self::EN_PROCESO]);
+        return in_array($this, [self::ABIERTA, self::EN_PROCESO, self::INFORMATIVO]);
     }
 
     public function puedeSerReasignada(): bool
     {
         return in_array($this, [self::ABIERTA, self::EN_PROCESO]);
+    }
+
+    public function esInformativo(): bool
+    {
+        return $this === self::INFORMATIVO;
     }
 
     public function siguienteEstado(): ?self

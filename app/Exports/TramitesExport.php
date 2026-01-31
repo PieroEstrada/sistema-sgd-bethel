@@ -68,16 +68,16 @@ class TramitesExport implements FromCollection, WithHeadings, WithMapping, WithS
     public function map($tramite): array
     {
         return [
-            $tramite->numero_expediente,
-            $tramite->tipo_tramite->getLabel(),
-            $tramite->estacion->razon_social,
-            $tramite->estacion->localidad,
-            $tramite->estado->getLabel(),
-            $tramite->fecha_presentacion->format('d/m/Y'),
+            $tramite->numero_expediente ?? '-',
+            $tramite->tipo_tramite ? (method_exists($tramite->tipo_tramite, 'getLabel') ? $tramite->tipo_tramite->getLabel() : $tramite->tipo_tramite) : '-',
+            $tramite->estacion ? $tramite->estacion->razon_social : '-',
+            $tramite->estacion ? $tramite->estacion->localidad : '-',
+            $tramite->estado ? (method_exists($tramite->estado, 'getLabel') ? $tramite->estado->getLabel() : $tramite->estado) : '-',
+            $tramite->fecha_presentacion ? $tramite->fecha_presentacion->format('d/m/Y') : '-',
             $tramite->fecha_respuesta ? $tramite->fecha_respuesta->format('d/m/Y') : 'Pendiente',
-            $tramite->dias_transcurridos,
-            $tramite->porcentaje_completud . '%',
-            $tramite->responsable->name,
+            $tramite->dias_transcurridos ?? '0',
+            ($tramite->porcentaje_completud ?? 0) . '%',
+            $tramite->responsable ? $tramite->responsable->name : 'Sin asignar',
             $tramite->costo_tramite ? 'S/. ' . number_format($tramite->costo_tramite, 2) : 'N/A',
         ];
     }

@@ -19,6 +19,11 @@ enum Banda: string
         };
     }
 
+    public function label(): string
+    {
+        return $this->getLabel();
+    }
+
     public function getDescription(): string
     {
         return match($this) {
