@@ -825,4 +825,42 @@ class TramiteMtcController extends Controller
 
         return back()->with('success', 'Documento principal subido correctamente.');
     }
+
+    public function eliminarDocumentoPrincipal(TramiteMtc $tramite)
+    {
+        if (!$tramite->documento_principal_ruta) {
+            return back()->withErrors(['error' => 'Este tramite no tiene documento principal.']);
+        }
+
+        // Eliminar archivo fisico
+        if (Storage::disk('public')->exists($tramite->documento_principal_ruta)) {
+            Storage::disk('public')->delete($tramite->documento_principal_ruta);
+        }
+
+        $nombreDocumento = $tramite->documento_principal_nombre;
+
+        // Eliminar registro Archivo asociado (si existe)
+        Archivo::where('tramite_id', $tramite->id)
+            ->where('ruta', $tramite->documento_principal_ruta)
+            ->delete();
+
+        // Limpiar campos del tramite
+        $tramite->update([
+            'documento_principal_ruta' => null,
+            'documento_principal_nombre' => null,
+            'documento_principal_size' => null,
+        ]);
+
+        // Registrar en historial
+        TramiteHistorial::create([
+            'tramite_id' => $tramite->id,
+            'tipo_accion' => 'documento_eliminado',
+            'descripcion_cambio' => "Documento principal eliminado: {$nombreDocumento}",
+            'usuario_accion_id' => Auth::id(),
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+        ]);
+
+        return back()->with('success', 'Documento principal eliminado correctamente.');
+    }
 }

@@ -80,7 +80,7 @@ class ScanRenovaciones extends Command
     {
         $this->info("\n1. Actualizando niveles de riesgo...");
 
-        $estaciones = Estacion::whereNotNull('licencia_vencimiento')->get();
+        $estaciones = Estacion::whereNotNull('licencia_vence')->get();
 
         $progressBar = $this->output->createProgressBar($estaciones->count());
         $progressBar->start();
@@ -88,7 +88,7 @@ class ScanRenovaciones extends Command
         foreach ($estaciones as $estacion) {
             $this->stats['estaciones_evaluadas']++;
 
-            $fechaVencimiento = Carbon::parse($estacion->licencia_vencimiento);
+            $fechaVencimiento = Carbon::parse($estacion->licencia_vence);
             $hoy = now();
 
             // Calcular meses restantes (negativo si ya venció)
@@ -101,13 +101,11 @@ class ScanRenovaciones extends Command
             $nuevoRiesgo = RiesgoLicencia::calcularDesdesMeses((int) $mesesRestantes);
 
             // Solo actualizar si cambió
-            if ($estacion->licencia_riesgo !== $nuevoRiesgo?->value ||
-                $estacion->licencia_meses_restantes !== (int) $mesesRestantes) {
+            if ($estacion->riesgo_licencia !== $nuevoRiesgo?->value) {
 
                 if (!$dryRun) {
                     $estacion->update([
-                        'licencia_meses_restantes' => (int) $mesesRestantes,
-                        'licencia_riesgo' => $nuevoRiesgo?->value,
+                        'riesgo_licencia' => $nuevoRiesgo?->value,
                     ]);
                 }
 
@@ -125,14 +123,14 @@ class ScanRenovaciones extends Command
     {
         $this->info("\n2. Creando tickets para estaciones en riesgo alto (<12 meses)...");
 
-        $estacionesRiesgoAlto = Estacion::where('licencia_riesgo', 'ALTO')
-            ->whereNotNull('licencia_vencimiento')
+        $estacionesRiesgoAlto = Estacion::where('riesgo_licencia', 'ALTO')
+            ->whereNotNull('licencia_vence')
             ->get();
 
         $this->info("   Estaciones en riesgo alto: {$estacionesRiesgoAlto->count()}");
 
         foreach ($estacionesRiesgoAlto as $estacion) {
-            $añoVencimiento = Carbon::parse($estacion->licencia_vencimiento)->year;
+            $añoVencimiento = Carbon::parse($estacion->licencia_vence)->year;
             $mesesRestantes = $estacion->licencia_meses_restantes ?? 0;
 
             // Determinar fase
@@ -188,7 +186,7 @@ class ScanRenovaciones extends Command
         }
 
         $mesesRestantes = $estacion->licencia_meses_restantes ?? 0;
-        $fechaVencimiento = $estacion->licencia_vencimiento;
+        $fechaVencimiento = $estacion->licencia_vence;
 
         $titulo = $this->generarTituloTicket($estacion, $tipoTicket, $mesesRestantes);
         $descripcion = $this->generarDescripcionTicket($estacion, $tipoTicket, $mesesRestantes, $fechaVencimiento);
@@ -279,7 +277,8 @@ class ScanRenovaciones extends Command
             ->where('prioridad', '!=', 'alta')
             ->where('prioridad', '!=', 'critica')
             ->whereHas('estacion', function ($q) {
-                $q->where('licencia_meses_restantes', '<=', 6);
+                $q->whereNotNull('licencia_vence')
+                  ->where('licencia_vence', '<=', DB::raw("DATE_ADD(CURDATE(), INTERVAL 6 MONTH)"));
             })
             ->get();
 
@@ -308,8 +307,9 @@ class ScanRenovaciones extends Command
         }
 
         // Obtener estaciones críticas (<=6 meses)
-        $estacionesCriticas = Estacion::where('licencia_riesgo', 'ALTO')
-            ->where('licencia_meses_restantes', '<=', 6)
+        $estacionesCriticas = Estacion::where('riesgo_licencia', 'ALTO')
+            ->whereNotNull('licencia_vence')
+            ->where('licencia_vence', '<=', DB::raw("DATE_ADD(CURDATE(), INTERVAL 6 MONTH)"))
             ->get();
 
         if ($estacionesCriticas->isEmpty()) {
@@ -369,10 +369,10 @@ class ScanRenovaciones extends Command
         $this->table(
             ['Nivel', 'Cantidad', 'Porcentaje'],
             collect([
-                ['Alto (<12 meses)', Estacion::where('licencia_riesgo', 'ALTO')->count()],
-                ['Medio (12-24 meses)', Estacion::where('licencia_riesgo', 'MEDIO')->count()],
-                ['Seguro (>24 meses)', Estacion::where('licencia_riesgo', 'SEGURO')->count()],
-                ['Sin evaluar', Estacion::whereNull('licencia_riesgo')->count()],
+                ['Alto (<12 meses)', Estacion::where('riesgo_licencia', 'ALTO')->count()],
+                ['Medio (12-24 meses)', Estacion::where('riesgo_licencia', 'MEDIO')->count()],
+                ['Seguro (>24 meses)', Estacion::where('riesgo_licencia', 'SEGURO')->count()],
+                ['Sin evaluar', Estacion::whereNull('riesgo_licencia')->count()],
             ])->map(function ($row) {
                 $total = Estacion::count();
                 $porcentaje = $total > 0 ? round(($row[1] / $total) * 100, 1) : 0;

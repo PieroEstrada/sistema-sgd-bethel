@@ -35,7 +35,7 @@ class LicenciaVencida extends Notification
             'estacion_codigo' => $this->estacion->codigo,
             'estacion_nombre' => $this->estacion->razon_social,
             'dias_vencida' => $this->diasVencida,
-            'fecha_vencimiento' => $this->estacion->licencia_vencimiento?->format('d/m/Y'),
+            'fecha_vencimiento' => $this->estacion->licencia_vence?->format('d/m/Y'),
             'url' => route('estaciones.show', $this->estacion->id),
             'sector' => $this->estacion->sector->value ?? null,
             'icono' => 'times-circle',

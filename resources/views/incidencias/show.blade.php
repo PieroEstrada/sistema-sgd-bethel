@@ -22,18 +22,20 @@
                         <i class="fas fa-clipboard-list text-danger me-2"></i>
                         {{ $incidencia->codigo_incidencia }}
                     </h1>
-                    <p class="text-muted">{{ $incidencia->descripcion_corta }}</p>
+                    <p class="text-muted">{{ $incidencia->titulo }}</p>
                 </div>
                 <div>
-                    @if($incidencia->estado->value != 'cerrada')
+                    @if($permisos['puede_editar'] && $incidencia->estado->value != 'cerrada')
                     <a href="{{ route('incidencias.edit', $incidencia) }}" class="btn btn-warning me-2">
                         <i class="fas fa-edit me-2"></i>Editar
                     </a>
                     @endif
+                    @if($permisos['puede_cambiar_estado'])
                     <button type="button" class="btn btn-success me-2"
                             onclick="cambiarEstadoRapido('{{ $incidencia->id }}', '{{ $incidencia->codigo_incidencia }}')">
                         <i class="fas fa-tasks me-2"></i>Cambiar Estado
                     </button>
+                    @endif
                     @if($permisos['puede_transferir'] ?? false)
                     <button type="button" class="btn btn-warning me-2"
                             data-bs-toggle="modal" data-bs-target="#modalTransferir">
@@ -59,7 +61,7 @@
                                 Estado Actual
                             </div>
                             <div class="h5 mb-0 font-weight-bold">
-                                {{ $incidencia->estado->name }}
+                                {{ ucfirst(str_replace('_', ' ', $incidencia->estado->value)) }}
                             </div>
                             <small class="text-muted">
                                 Desde: {{ $incidencia->updated_at->format('d/m/Y H:i') }}
@@ -74,7 +76,7 @@
         </div>
 
         <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-left-{{ $incidencia->prioridad->value == 'alta' ? 'danger' : ($incidencia->prioridad->value == 'media' ? 'warning' : 'info') }} shadow h-100 py-2">
+            <div class="card border-left-{{ $incidencia->prioridad->value == 'critica' || $incidencia->prioridad->value == 'alta' ? 'danger' : ($incidencia->prioridad->value == 'media' ? 'warning' : 'info') }} shadow h-100 py-2">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
                         <div class="col mr-2">
@@ -82,9 +84,11 @@
                                 Prioridad
                             </div>
                             <div class="h5 mb-0 font-weight-bold">
-                                {{ $incidencia->prioridad->name }}
+                                {{ ucfirst($incidencia->prioridad->value) }}
                             </div>
+                            @if($incidencia->impacto_servicio)
                             <small class="text-muted">Impacto: {{ ucfirst($incidencia->impacto_servicio) }}</small>
+                            @endif
                         </div>
                         <div class="col-auto">
                             <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
@@ -151,15 +155,15 @@
                     </div>
                     
                     <div class="row mb-3">
-                        <div class="col-sm-4"><strong>Descripción Corta:</strong></div>
-                        <div class="col-sm-8">{{ $incidencia->descripcion_corta }}</div>
+                        <div class="col-sm-4"><strong>Título:</strong></div>
+                        <div class="col-sm-8">{{ $incidencia->titulo }}</div>
                     </div>
                     
                     <div class="row mb-3">
-                        <div class="col-sm-4"><strong>Descripción Detallada:</strong></div>
+                        <div class="col-sm-4"><strong>Descripción:</strong></div>
                         <div class="col-sm-8">
                             <div class="bg-light p-3 rounded">
-                                {{ $incidencia->descripcion_detallada }}
+                                {{ $incidencia->descripcion }}
                             </div>
                         </div>
                     </div>
@@ -171,19 +175,35 @@
                                 <a href="{{ route('estaciones.show', $incidencia->estacion) }}" class="text-decoration-none">
                                     <strong>{{ $incidencia->estacion->codigo }}</strong> - {{ $incidencia->estacion->razon_social }}
                                 </a>
-                                <br><small class="text-muted">{{ $incidencia->estacion->localidad }}, {{ $incidencia->estacion->departamento }}</small>
+                                <br><small class="text-muted">
+                                    {{ $incidencia->estacion->localidad ?? '' }}
+                                    @if($incidencia->estacion->departamento), {{ $incidencia->estacion->departamento }}@endif
+                                </small>
                             @else
                                 <span class="text-muted">No asignada</span>
                             @endif
                         </div>
                     </div>
                     
+                    @if($incidencia->categoria)
                     <div class="row mb-3">
                         <div class="col-sm-4"><strong>Categoría:</strong></div>
                         <div class="col-sm-8">
-                            <span class="badge bg-secondary">{{ ucfirst($incidencia->categoria ?? 'General') }}</span>
+                            <span class="badge bg-secondary">{{ ucfirst($incidencia->categoria) }}</span>
                         </div>
                     </div>
+                    @endif
+
+                    @if($incidencia->impacto_servicio)
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Impacto en Servicio:</strong></div>
+                        <div class="col-sm-8">
+                            <span class="badge bg-{{ $incidencia->impacto_servicio == 'alto' ? 'danger' : ($incidencia->impacto_servicio == 'medio' ? 'warning' : 'success') }}">
+                                {{ ucfirst($incidencia->impacto_servicio) }}
+                            </span>
+                        </div>
+                    </div>
+                    @endif
                     
                     <div class="row mb-3">
                         <div class="col-sm-4"><strong>Fecha de Reporte:</strong></div>
@@ -195,74 +215,36 @@
                     
                     <div class="row mb-3">
                         <div class="col-sm-4"><strong>Reportado Por:</strong></div>
-                        <div class="col-sm-8">{{ $incidencia->reportado_por }}</div>
+                        <div class="col-sm-8">{{ $incidencia->nombre_reportante }}</div>
                     </div>
                     
-                    @if($incidencia->asignado_a)
                     <div class="row mb-3">
                         <div class="col-sm-4"><strong>Asignado A:</strong></div>
-                        <div class="col-sm-8">{{ $incidencia->asignado_a }}</div>
+                        <div class="col-sm-8">{{ $incidencia->nombre_asignado }}</div>
                     </div>
-                    @endif
 
-                    @if($incidencia->area_responsable_actual)
+                    <!-- Área responsable y transferencias -->
                     <div class="row mb-3">
                         <div class="col-sm-4"><strong>Área Responsable:</strong></div>
                         <div class="col-sm-8">
-                            <span class="badge bg-primary">{{ $incidencia->area_responsable_actual }}</span>
-                            @if($incidencia->contador_transferencias > 0)
-                                <small class="text-muted ms-2">
-                                    ({{ $incidencia->contador_transferencias }} {{ $incidencia->contador_transferencias === 1 ? 'transferencia' : 'transferencias' }})
-                                </small>
-                            @endif
-                        </div>
-                    </div>
-                    @endif
-
-                    @if($incidencia->responsableActual)
-                    <div class="row mb-3">
-                        <div class="col-sm-4"><strong>Responsable Actual:</strong></div>
-                        <div class="col-sm-8">
-                            {{ $incidencia->responsableActual->name }}
-                            <small class="text-muted">({{ $incidencia->responsableActual->rol->getLabel() }})</small>
-                            @if($incidencia->fecha_ultima_transferencia)
-                                <br><small class="text-muted">
-                                    Desde: {{ $incidencia->fecha_ultima_transferencia->format('d/m/Y H:i') }}
-                                    ({{ $incidencia->fecha_ultima_transferencia->diffForHumans() }})
-                                </small>
-                            @endif
-                        </div>
-                    </div>
-                    @endif
-
-                    @if($incidencia->fecha_inicio_atencion)
-                    <div class="row mb-3">
-                        <div class="col-sm-4"><strong>Inicio de Atención:</strong></div>
-                        <div class="col-sm-8">
-                            {{ $incidencia->fecha_inicio_atencion->format('d/m/Y H:i:s') }}
-                            <br><small class="text-muted">{{ $incidencia->fecha_inicio_atencion->diffForHumans() }}</small>
-                        </div>
-                    </div>
-                    @endif
-                    
-                    @if($incidencia->fecha_resolucion_estimada)
-                    <div class="row mb-3">
-                        <div class="col-sm-4"><strong>Resolución Estimada:</strong></div>
-                        <div class="col-sm-8">
-                            {{ $incidencia->fecha_resolucion_estimada->format('d/m/Y H:i:s') }}
-                            @php
-                                $diasParaResolucion = now()->diffInDays($incidencia->fecha_resolucion_estimada, false);
-                            @endphp
-                            @if($diasParaResolucion < 0)
-                                <br><small class="badge bg-danger">Vencida hace {{ abs($diasParaResolucion) }} días</small>
-                            @elseif($diasParaResolucion < 1)
-                                <br><small class="badge bg-warning">Vence hoy</small>
+                            @if($incidencia->area_responsable_actual)
+                                <span class="badge bg-primary">{{ ucfirst($incidencia->area_responsable_actual) }}</span>
+                                @if($incidencia->contador_transferencias > 0)
+                                    <small class="text-muted ms-2">
+                                        ({{ $incidencia->contador_transferencias }} {{ $incidencia->contador_transferencias === 1 ? 'transferencia' : 'transferencias' }})
+                                    </small>
+                                @endif
+                                @if($incidencia->fecha_ultima_transferencia)
+                                    <br><small class="text-muted">
+                                        Última transferencia: {{ $incidencia->fecha_ultima_transferencia->format('d/m/Y H:i') }}
+                                        ({{ $incidencia->fecha_ultima_transferencia->diffForHumans() }})
+                                    </small>
+                                @endif
                             @else
-                                <br><small class="badge bg-success">{{ $diasParaResolucion }} días restantes</small>
+                                <span class="text-muted">No asignada</span>
                             @endif
                         </div>
                     </div>
-                    @endif
                     
                     @if($incidencia->fecha_resolucion)
                     <div class="row mb-3">
@@ -273,36 +255,45 @@
                         </div>
                     </div>
                     @endif
-                </div>
-            </div>
 
-            <!-- Acciones Tomadas -->
-            @if($incidencia->acciones_tomadas)
-            <div class="card shadow mt-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-success">Acciones Tomadas</h6>
-                </div>
-                <div class="card-body">
-                    <div class="bg-light p-3 rounded">
-                        {{ $incidencia->acciones_tomadas }}
+                    @if($incidencia->solucion)
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Solución:</strong></div>
+                        <div class="col-sm-8">
+                            <div class="bg-light p-3 rounded">
+                                {!! nl2br(e($incidencia->solucion)) !!}
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
-            @endif
+                    @endif
 
-            <!-- Observaciones -->
-            @if($incidencia->observaciones)
-            <div class="card shadow mt-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-info">Observaciones</h6>
-                </div>
-                <div class="card-body">
-                    <div class="bg-light p-3 rounded">
-                        {!! nl2br(e($incidencia->observaciones)) !!}
+                    @if($incidencia->observaciones_tecnicas)
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Observaciones Técnicas:</strong></div>
+                        <div class="col-sm-8">
+                            <div class="bg-light p-3 rounded">
+                                {!! nl2br(e($incidencia->observaciones_tecnicas)) !!}
+                            </div>
+                        </div>
                     </div>
+                    @endif
+
+                    <!-- Costos -->
+                    @if($incidencia->costo_soles || $incidencia->costo_dolares)
+                    <div class="row mb-3">
+                        <div class="col-sm-4"><strong>Costos:</strong></div>
+                        <div class="col-sm-8">
+                            @if($incidencia->costo_soles)
+                                <span class="badge bg-info">S/. {{ number_format($incidencia->costo_soles, 2) }}</span>
+                            @endif
+                            @if($incidencia->costo_dolares)
+                                <span class="badge bg-info ms-1">USD {{ number_format($incidencia->costo_dolares, 2) }}</span>
+                            @endif
+                        </div>
+                    </div>
+                    @endif
                 </div>
             </div>
-            @endif
         </div>
 
         <!-- Panel Lateral -->
@@ -335,9 +326,9 @@
 
                                     @if($registro->tipo_accion === 'cambio_estado')
                                     <small class="d-block mb-1">
-                                        <span class="badge bg-secondary">{{ ucfirst($registro->estado_anterior) }}</span>
+                                        <span class="badge bg-secondary">{{ ucfirst($registro->estado_anterior ?? 'N/A') }}</span>
                                         <i class="fas fa-arrow-right mx-1"></i>
-                                        <span class="badge bg-success">{{ ucfirst($registro->estado_nuevo) }}</span>
+                                        <span class="badge bg-success">{{ ucfirst(str_replace('_', ' ', $registro->estado_nuevo ?? 'N/A')) }}</span>
                                     </small>
                                     @endif
 
@@ -346,14 +337,8 @@
                                         <i class="fas fa-building me-1"></i>
                                         <strong>De:</strong> {{ ucfirst($registro->area_anterior ?? 'Sin asignar') }}
                                         <i class="fas fa-arrow-right mx-1"></i>
-                                        <strong>A:</strong> {{ ucfirst($registro->area_nueva) }}
+                                        <strong>A:</strong> {{ ucfirst($registro->area_nueva ?? 'N/A') }}
                                     </small>
-                                    @if($registro->responsableNuevo)
-                                    <small class="d-block">
-                                        <i class="fas fa-user me-1"></i>
-                                        <strong>Responsable:</strong> {{ $registro->responsableNuevo->name }}
-                                    </small>
-                                    @endif
                                     @endif
 
                                     <small class="text-muted d-block mt-2">
@@ -394,7 +379,7 @@
                         </small>
                     </div>
                     
-                    @if($incidencia->estado->value != 'cerrada')
+                    @if($incidencia->estado->value != 'cerrada' && $incidencia->estado->value != 'cancelada')
                     <div class="alert alert-warning alert-sm">
                         <i class="fas fa-exclamation-triangle me-2"></i>
                         <strong>Incidencia Activa</strong><br>
@@ -425,23 +410,30 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <form id="formCambiarEstado">
+                <form id="formCambiarEstado" method="POST" action="{{ route('incidencias.update', $incidencia) }}">
+                    @csrf
+                    @method('PUT')
+                    <!-- Campos ocultos para enviar datos mínimos requeridos por update() -->
+                    <input type="hidden" name="descripcion_corta" value="{{ $incidencia->titulo }}">
+                    <input type="hidden" name="descripcion_detallada" value="{{ $incidencia->descripcion }}">
+                    <input type="hidden" name="estacion_id" value="{{ $incidencia->estacion_id }}">
+                    <input type="hidden" name="prioridad" value="{{ $incidencia->prioridad->value }}">
+
                     <div class="mb-3">
                         <label for="nuevo_estado" class="form-label">Nuevo Estado</label>
-                        <select class="form-control" id="nuevo_estado" required>
+                        <select class="form-control" id="nuevo_estado" name="estado" required>
                             <option value="">Seleccionar estado</option>
-                            <option value="abierta" {{ $incidencia->estado->value == 'abierta' ? 'disabled' : '' }}>Abierta</option>
-                            <option value="en_proceso" {{ $incidencia->estado->value == 'en_proceso' ? 'disabled' : '' }}>En Proceso</option>
-                            <option value="resuelta" {{ $incidencia->estado->value == 'resuelta' ? 'disabled' : '' }}>Resuelta</option>
-                            <option value="cerrada" {{ $incidencia->estado->value == 'cerrada' ? 'disabled' : '' }}>Finalizado</option>
-                            <option value="informativo" {{ $incidencia->estado->value == 'informativo' ? 'disabled' : '' }}>Informativo</option>
-                            <option value="cancelada" {{ $incidencia->estado->value == 'cancelada' ? 'disabled' : '' }}>Cancelada</option>
+                            <option value="abierta" {{ $incidencia->estado->value == 'abierta' ? 'disabled selected' : '' }}>Abierta</option>
+                            <option value="en_proceso" {{ $incidencia->estado->value == 'en_proceso' ? 'disabled selected' : '' }}>En Proceso</option>
+                            <option value="resuelta" {{ $incidencia->estado->value == 'resuelta' ? 'disabled selected' : '' }}>Resuelta</option>
+                            <option value="cerrada" {{ $incidencia->estado->value == 'cerrada' ? 'disabled selected' : '' }}>Finalizado</option>
+                            <option value="cancelada" {{ $incidencia->estado->value == 'cancelada' ? 'disabled selected' : '' }}>Cancelada</option>
                         </select>
-                        <small class="form-text text-muted">Estado actual: {{ $incidencia->estado->name }}</small>
+                        <small class="form-text text-muted">Estado actual: {{ ucfirst(str_replace('_', ' ', $incidencia->estado->value)) }}</small>
                     </div>
                     <div class="mb-3">
                         <label for="observaciones_estado" class="form-label">Observaciones del Cambio</label>
-                        <textarea class="form-control" id="observaciones_estado" rows="3" 
+                        <textarea class="form-control" id="observaciones_estado" name="observaciones" rows="3" 
                                   placeholder="Describe el motivo del cambio de estado..."></textarea>
                     </div>
                 </form>
@@ -479,12 +471,12 @@
                         </h6>
                         <div class="row">
                             <div class="col-6">
-                                <strong>Área:</strong><br>
-                                {{ $incidencia->area_responsable_actual ?? 'No asignada' }}
+                                <strong>Área actual:</strong><br>
+                                {{ $incidencia->area_responsable_actual ? ucfirst($incidencia->area_responsable_actual) : 'No asignada' }}
                             </div>
                             <div class="col-6">
-                                <strong>Responsable:</strong><br>
-                                {{ $incidencia->responsableActual->name ?? 'No asignado' }}
+                                <strong>Asignado a:</strong><br>
+                                {{ $incidencia->nombre_asignado }}
                             </div>
                         </div>
                         @if($incidencia->contador_transferencias > 0)
@@ -499,33 +491,37 @@
                         @endif
                     </div>
 
-                    <!-- Formulario de transferencia -->
+                    <!-- Área destino -->
                     <div class="mb-3">
                         <label class="form-label">
                             Área Destino <span class="text-danger">*</span>
                         </label>
                         <select name="area_nueva" class="form-select" required>
                             <option value="">Seleccione el área destino...</option>
-                            <option value="ingenieria">Ingeniería</option>
-                            <option value="laboratorio">Laboratorio</option>
-                            <option value="logistica">Logística</option>
-                            <option value="operaciones">Operaciones</option>
-                            <option value="administracion">Administración</option>
-                            <option value="contabilidad">Contabilidad</option>
-                            <option value="iglesia_local">Iglesia Local</option>
+                            <option value="ingenieria" {{ $incidencia->area_responsable_actual == 'ingenieria' ? 'disabled' : '' }}>Ingeniería</option>
+                            <option value="laboratorio" {{ $incidencia->area_responsable_actual == 'laboratorio' ? 'disabled' : '' }}>Laboratorio</option>
+                            <option value="logistica" {{ $incidencia->area_responsable_actual == 'logistica' ? 'disabled' : '' }}>Logística</option>
+                            <option value="operaciones" {{ $incidencia->area_responsable_actual == 'operaciones' ? 'disabled' : '' }}>Operaciones</option>
+                            <option value="administracion" {{ $incidencia->area_responsable_actual == 'administracion' ? 'disabled' : '' }}>Administración</option>
+                            <option value="contabilidad" {{ $incidencia->area_responsable_actual == 'contabilidad' ? 'disabled' : '' }}>Contabilidad</option>
+                            <option value="iglesia_local" {{ $incidencia->area_responsable_actual == 'iglesia_local' ? 'disabled' : '' }}>Iglesia Local</option>
                         </select>
                         <small class="form-text text-muted">
-                            Seleccione el área que se hará cargo de la incidencia
+                            Seleccione el área que se hará cargo de la incidencia.
+                            @if($incidencia->area_responsable_actual)
+                                El área actual ({{ ucfirst($incidencia->area_responsable_actual) }}) está deshabilitada.
+                            @endif
                         </small>
                     </div>
 
+                    <!-- Responsable nuevo (opcional) -->
                     <div class="mb-3">
                         <label class="form-label">Nuevo Responsable (Opcional)</label>
                         <select name="responsable_nuevo_id" class="form-select">
                             <option value="">Sin asignar específicamente</option>
                             @foreach($usuariosTransferencia as $usuario)
                                 <option value="{{ $usuario->id }}">
-                                    {{ $usuario->name }} - {{ $usuario->rol->getLabel() }}
+                                    {{ $usuario->name }} - {{ $usuario->rol->getDisplayName() }}
                                     @if($usuario->sector_asignado)
                                         ({{ $usuario->sector_asignado }})
                                     @endif
@@ -537,6 +533,7 @@
                         </small>
                     </div>
 
+                    <!-- Observaciones (obligatorias) -->
                     <div class="mb-3">
                         <label class="form-label">
                             Observaciones / Motivo de Transferencia <span class="text-danger">*</span>
@@ -545,6 +542,7 @@
                                   class="form-control"
                                   rows="4"
                                   required
+                                  minlength="10"
                                   placeholder="Explique el motivo de la transferencia (mínimo 10 caracteres)..."></textarea>
                         <small class="form-text text-muted">
                             Mínimo 10 caracteres, máximo 500. Esta información quedará registrada en el historial.
@@ -554,10 +552,8 @@
                     <!-- Advertencia -->
                     <div class="alert alert-warning mb-0">
                         <i class="fas fa-exclamation-triangle me-1"></i>
-                        <strong>Importante:</strong> Esta acción quedará registrada en el historial de la incidencia.
-                        @if($incidencia->responsable_actual_user_id || $incidencia->asignado_a_user_id)
-                            Se notificará automáticamente al nuevo responsable asignado.
-                        @endif
+                        <strong>Importante:</strong> Esta acción quedará registrada en el historial de la incidencia
+                        y no puede ser revertida.
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -577,12 +573,8 @@
 
 @push('scripts')
 <script>
-let incidenciaSeleccionada = '{{ $incidencia->id }}';
-
 // ⚡ FUNCIÓN PARA CAMBIAR ESTADO RÁPIDO
 function cambiarEstadoRapido(incidenciaId, codigoIncidencia) {
-    incidenciaSeleccionada = incidenciaId;
-    
     // Actualizar título del modal
     document.querySelector('#modalCambiarEstado .modal-title').innerHTML = `
         <i class="fas fa-tasks text-warning me-2"></i>
@@ -594,34 +586,37 @@ function cambiarEstadoRapido(incidenciaId, codigoIncidencia) {
     modal.show();
 }
 
-// ⚡ CONFIRMAR CAMBIO DE ESTADO
+// ⚡ CONFIRMAR CAMBIO DE ESTADO (envía el formulario real al backend)
 function confirmarCambioEstado() {
     const nuevoEstado = document.getElementById('nuevo_estado').value;
-    const observaciones = document.getElementById('observaciones_estado').value;
     
     if (!nuevoEstado) {
         alert('Por favor selecciona un nuevo estado');
         return;
     }
     
-    // Simular cambio exitoso
-    alert(`Estado cambiado exitosamente a: ${nuevoEstado.replace('_', ' ').toUpperCase()}\n\nObservaciones: ${observaciones || 'Ninguna'}\n\nEsta funcionalidad se implementará completamente en el backend.`);
-    
-    // Cerrar modal
-    bootstrap.Modal.getInstance(document.getElementById('modalCambiarEstado')).hide();
-    
-    // Opcional: recargar página para mostrar cambios
-    // window.location.reload();
+    // Enviar el formulario real
+    document.getElementById('formCambiarEstado').submit();
 }
 
 // ⚡ INICIALIZACIÓN
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Vista de detalle de incidencia cargada');
-    
     // Limpiar formulario del modal al cerrarse
-    document.getElementById('modalCambiarEstado').addEventListener('hidden.bs.modal', function () {
-        document.getElementById('formCambiarEstado').reset();
-    });
+    const modalCambiarEstado = document.getElementById('modalCambiarEstado');
+    if (modalCambiarEstado) {
+        modalCambiarEstado.addEventListener('hidden.bs.modal', function () {
+            document.getElementById('formCambiarEstado').reset();
+        });
+    }
+
+    // Limpiar formulario de transferencia al cerrarse
+    const modalTransferir = document.getElementById('modalTransferir');
+    if (modalTransferir) {
+        modalTransferir.addEventListener('hidden.bs.modal', function () {
+            const form = modalTransferir.querySelector('form');
+            if (form) form.reset();
+        });
+    }
 });
 </script>
 @endpush

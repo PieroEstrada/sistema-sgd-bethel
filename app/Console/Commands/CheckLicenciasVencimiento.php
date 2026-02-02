@@ -44,12 +44,12 @@ class CheckLicenciasVencimiento extends Command
         // 1. Verificar licencias VENCIDAS
         $this->info('📋 Verificando licencias vencidas...');
 
-        $estacionesVencidas = Estacion::whereNotNull('licencia_vencimiento')
-            ->whereDate('licencia_vencimiento', '<', now())
+        $estacionesVencidas = Estacion::whereNotNull('licencia_vence')
+            ->whereDate('licencia_vence', '<', now())
             ->get();
 
         foreach ($estacionesVencidas as $estacion) {
-            $diasVencida = abs(now()->diffInDays($estacion->licencia_vencimiento, false));
+            $diasVencida = abs(now()->diffInDays($estacion->licencia_vence, false));
 
             // Verificar deduplicación
             if (!$force && !$this->debeNotificar('licencia_vencida', $estacion->id, $diasVencida, $ventanaDeduplicacion)) {
@@ -77,13 +77,13 @@ class CheckLicenciasVencimiento extends Command
         foreach ($diasAlerta as $dias) {
             $fechaObjetivo = now()->addDays($dias)->startOfDay();
 
-            $estaciones = Estacion::whereNotNull('licencia_vencimiento')
-                ->whereDate('licencia_vencimiento', '=', $fechaObjetivo)
+            $estaciones = Estacion::whereNotNull('licencia_vence')
+                ->whereDate('licencia_vence', '=', $fechaObjetivo)
                 ->get();
 
             foreach ($estaciones as $estacion) {
                 // Verificar deduplicación
-                if (!$force && !$this->debeNotificar('licencia_vencimiento', $estacion->id, $dias, $ventanaDeduplicacion)) {
+                if (!$force && !$this->debeNotificar('licencia_vence', $estacion->id, $dias, $ventanaDeduplicacion)) {
                     $alertasDuplicadas++;
                     continue;
                 }
@@ -114,7 +114,7 @@ class CheckLicenciasVencimiento extends Command
                 ['Licencias vencidas', $licenciasVencidas],
                 ['Alertas generadas', $alertasGeneradas],
                 ['Alertas duplicadas (omitidas)', $alertasDuplicadas],
-                ['Total estaciones procesadas', $estacionesVencidas->count() + Estacion::whereNotNull('licencia_vencimiento')->count()],
+                ['Total estaciones procesadas', $estacionesVencidas->count() + Estacion::whereNotNull('licencia_vence')->count()],
             ]
         );
 

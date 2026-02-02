@@ -103,6 +103,9 @@ class IncidenciaSeeder extends Seeder
 
                 $estado = $this->determinarEstado($fechaReporte);
 
+                $areas = ['ingenieria', 'laboratorio', 'logistica', 'operaciones', null];
+                $areaResponsable = $areas[array_rand($areas)];
+
                 $incidenciaData = [
                     'titulo' => $tipoIncidencia['titulo'],
                     'descripcion' => $tipoIncidencia['descripcion'] . " - Estación: {$estacion->localidad}",
@@ -110,13 +113,17 @@ class IncidenciaSeeder extends Seeder
                     'prioridad' => $tipoIncidencia['prioridad'],
                     'estado' => $estado,
                     'reportado_por' => $reportadoPor->id,
+                    'reportado_por_user_id' => $reportadoPor->id,
+                    'area_responsable_actual' => $areaResponsable,
                     'fecha_reporte' => $fechaReporte,
                     'costo_soles' => $tipoIncidencia['costo_soles'] ?? null,
                     'requiere_visita_tecnica' => $tipoIncidencia['requiere_visita_tecnica'],
                 ];
 
                 if (in_array($estado, [EstadoIncidencia::EN_PROCESO, EstadoIncidencia::RESUELTA, EstadoIncidencia::CERRADA])) {
-                    $incidenciaData['asignado_a'] = $tecnicos->random()->id;
+                    $tecnicoAsignado = $tecnicos->random();
+                    $incidenciaData['asignado_a'] = $tecnicoAsignado->id;
+                    $incidenciaData['asignado_a_user_id'] = $tecnicoAsignado->id;
                 }
 
                 if (in_array($estado, [EstadoIncidencia::RESUELTA, EstadoIncidencia::CERRADA])) {

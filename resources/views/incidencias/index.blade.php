@@ -24,9 +24,11 @@
                     <p class="text-muted">Monitoreo y seguimiento de incidencias técnicas</p>
                 </div>
                 <div class="btn-group" role="group">
+                    @if(auth()->user()->rol !== \App\Enums\RolUsuario::VISOR)
                     <a href="{{ route('incidencias.create') }}" class="btn btn-danger">
                         <i class="fas fa-plus me-2"></i>Nueva Incidencia
                     </a>
+                    @endif
                     <button type="button" class="btn btn-success" onclick="abrirModalExportacion()">
                         <i class="fas fa-file-excel me-2"></i>Exportar
                     </button>
@@ -335,7 +337,6 @@
                                 </td>
 
                                 <td>
-                                    <!-- tus acciones igual -->
                                     <div class="btn-group" role="group">
                                         <a href="{{ route('incidencias.show', $incidencia) }}"
                                         class="btn btn-info btn-sm"
@@ -343,7 +344,7 @@
                                             <i class="fas fa-eye"></i>
                                         </a>
 
-                                        @if($incidencia->estado !== 'cerrada' || in_array(auth()->user()->rol, ['administrador', 'coordinador_operaciones']))
+                                        @if($incidencia->puede_editar)
                                             <a href="{{ route('incidencias.edit', $incidencia) }}"
                                             class="btn btn-warning btn-sm"
                                             data-toggle="tooltip" title="Editar">
@@ -351,12 +352,12 @@
                                             </a>
                                         @endif
 
-                                        @if(in_array($incidencia->estado_value, ['abierta', 'en_proceso']))
+                                        @if($incidencia->puede_transferir)
                                             <button type="button"
                                                     class="btn btn-primary btn-sm"
                                                     data-toggle="tooltip"
-                                                    title="Asignar área responsable"
-                                                    onclick="abrirModalAsignarArea({{ $incidencia->id }}, '{{ $incidencia->titulo }}', '{{ $incidencia->area_responsable_actual ?? '' }}')">
+                                                    title="Transferir área responsable"
+                                                    onclick="abrirModalAsignarArea({{ $incidencia->id }}, '{{ addslashes($incidencia->titulo) }}', '{{ $incidencia->area_responsable_actual ?? '' }}')">
                                                 <i class="fas fa-share"></i>
                                             </button>
                                         @endif
@@ -988,11 +989,11 @@ function ejecutarExportacion() {
                     </div>
 
                     <div class="mb-3">
-                        <label for="observaciones" class="form-label">Observaciones (Opcional)</label>
+                        <label for="observaciones" class="form-label">Observaciones / Motivo <span class="text-danger">*</span></label>
                         <textarea class="form-control" id="observaciones" name="observaciones" rows="3"
-                                  placeholder="Agregue observaciones si lo desea"
-                                  maxlength="500"></textarea>
-                        <small class="text-muted">Máximo 500 caracteres</small>
+                                  placeholder="Explique el motivo de la transferencia (mínimo 10 caracteres)..."
+                                  minlength="10" maxlength="500" required></textarea>
+                        <small class="text-muted">Mínimo 10 caracteres, máximo 500. Esta información quedará registrada en el historial.</small>
                     </div>
                 </div>
                 <div class="modal-footer">

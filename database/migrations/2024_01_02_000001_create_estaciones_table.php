@@ -19,7 +19,7 @@ return new class extends Migration
             $table->decimal('frecuencia', 8, 1)->nullable(); // Para radio
             $table->integer('canal_tv')->nullable(); // Para TV
             $table->integer('presbyter_id')->nullable();
-            $table->enum('estado', ['A.A', 'F.A', 'N.I', 'MANT'])->default('N.I');
+            $table->string('estado', 30)->default('NO_INSTALADA');
             $table->integer('potencia_watts');
             $table->enum('sector', ['NORTE', 'CENTRO', 'SUR']);
             $table->decimal('latitud', 10, 6)->nullable();

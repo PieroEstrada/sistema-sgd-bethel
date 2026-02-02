@@ -162,6 +162,8 @@ Route::middleware(['auth'])->group(function () {
             ->name('tramites.archivos.subir');
         Route::post('/tramites-mtc/{tramite}/documento-principal', [TramiteMtcController::class, 'subirDocumentoPrincipal'])
             ->name('tramites.subir-documento');
+        Route::delete('/tramites-mtc/{tramite}/documento-principal', [TramiteMtcController::class, 'eliminarDocumentoPrincipal'])
+            ->name('tramites.eliminar-documento');
         Route::delete('/tramites-mtc/archivos/{archivo}', [TramiteMtcController::class, 'eliminarArchivo'])
             ->name('tramites.archivos.eliminar');
     });

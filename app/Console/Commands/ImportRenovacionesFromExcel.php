@@ -239,11 +239,10 @@ class ImportRenovacionesFromExcel extends Command
 
         // Preparar datos
         $updateData = [
-            'licencia_vencimiento' => $fechaVencimiento,
+            'licencia_vence' => $fechaVencimiento,
             'licencia_rvm' => $rvm,
             'licencia_situacion' => $situacion,
-            'licencia_meses_restantes' => (int) $mesesRestantes,
-            'licencia_riesgo' => $riesgo?->value,
+            'riesgo_licencia' => $riesgo?->value,
         ];
 
         if (!$dryRun) {
@@ -450,10 +449,10 @@ class ImportRenovacionesFromExcel extends Command
         $this->table(
             ['Riesgo', 'Cantidad'],
             [
-                ['Alto (<12 meses)', Estacion::where('licencia_riesgo', 'ALTO')->count()],
-                ['Medio (12-24 meses)', Estacion::where('licencia_riesgo', 'MEDIO')->count()],
-                ['Seguro (>24 meses)', Estacion::where('licencia_riesgo', 'SEGURO')->count()],
-                ['Sin fecha', Estacion::whereNull('licencia_vencimiento')->count()],
+                ['Alto (<12 meses)', Estacion::where('riesgo_licencia', 'ALTO')->count()],
+                ['Medio (12-24 meses)', Estacion::where('riesgo_licencia', 'MEDIO')->count()],
+                ['Seguro (>24 meses)', Estacion::where('riesgo_licencia', 'SEGURO')->count()],
+                ['Sin fecha', Estacion::whereNull('licencia_vence')->count()],
             ]
         );
     }

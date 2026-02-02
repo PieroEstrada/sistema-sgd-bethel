@@ -22,7 +22,7 @@ class EstacionesExport implements FromCollection, WithHeadings, WithMapping, Wit
 
     private function columnasDefecto()
     {
-        return ['codigo', 'razon_social', 'localidad', 'provincia', 'departamento', 'sector', 'banda', 'frecuencia', 'potencia_watts', 'estado', 'licencia_vencimiento'];
+        return ['codigo', 'razon_social', 'localidad', 'provincia', 'departamento', 'sector', 'banda', 'frecuencia', 'potencia_watts', 'estado', 'licencia_vence'];
     }
 
     public function collection()
@@ -63,14 +63,15 @@ class EstacionesExport implements FromCollection, WithHeadings, WithMapping, Wit
         if (isset($this->filtros['riesgo']) && $this->filtros['riesgo']) {
             $riesgo = strtoupper($this->filtros['riesgo']);
             if (in_array($riesgo, ['ALTO', 'MEDIO', 'SEGURO'])) {
-                $query->where('licencia_riesgo', $riesgo);
+                $query->where('riesgo_licencia', $riesgo);
             } elseif ($riesgo === 'SIN_EVALUAR' || $this->filtros['riesgo'] === 'sin_evaluar') {
-                $query->whereNull('licencia_riesgo');
+                $query->whereNull('riesgo_licencia');
             }
         }
 
         if (isset($this->filtros['vencidas']) && $this->filtros['vencidas'] == '1') {
-            $query->where('licencia_meses_restantes', '<', 0);
+            $query->whereNotNull('licencia_vence')
+                  ->where('licencia_vence', '<', now()->toDateString());
         }
 
         return $query->orderBy('localidad')->get();
@@ -90,9 +91,9 @@ class EstacionesExport implements FromCollection, WithHeadings, WithMapping, Wit
             'canal_tv' => 'Canal TV',
             'potencia_watts' => 'Potencia (W)',
             'estado' => 'Estado',
-            'licencia_vencimiento' => 'Vence Licencia',
+            'licencia_vence' => 'Vence Licencia',
             'licencia_meses_restantes' => 'Meses Restantes',
-            'licencia_riesgo' => 'Riesgo Licencia',
+            'riesgo_licencia' => 'Riesgo Licencia',
             'celular_encargado' => 'Celular Encargado',
             'latitud' => 'Latitud',
             'longitud' => 'Longitud',
@@ -123,9 +124,9 @@ class EstacionesExport implements FromCollection, WithHeadings, WithMapping, Wit
             'canal_tv' => $estacion->canal_tv ?: '-',
             'potencia_watts' => number_format($estacion->potencia_watts) . ' W',
             'estado' => $this->getEstadoLabel($estacion),
-            'licencia_vencimiento' => $estacion->licencia_vencimiento ? $estacion->licencia_vencimiento->format('d/m/Y') : 'Sin fecha',
+            'licencia_vence' => $estacion->licencia_vence ? $estacion->licencia_vence->format('d/m/Y') : 'Sin fecha',
             'licencia_meses_restantes' => $estacion->licencia_meses_restantes !== null ? $estacion->licencia_meses_restantes . ' meses' : 'N/A',
-            'licencia_riesgo' => $estacion->licencia_riesgo ?: 'Sin evaluar',
+            'riesgo_licencia' => $estacion->riesgo_licencia ? $estacion->riesgo_licencia->value : 'Sin evaluar',
             'celular_encargado' => $estacion->celular_encargado ?: '-',
             'latitud' => $estacion->latitud ?: '-',
             'longitud' => $estacion->longitud ?: '-',
@@ -158,9 +159,9 @@ class EstacionesExport implements FromCollection, WithHeadings, WithMapping, Wit
         $estadoValue = is_object($estacion->estado) ? $estacion->estado->value : $estacion->estado;
 
         return match($estadoValue) {
-            'A.A' => 'Al Aire',
-            'F.A' => 'Fuera del Aire',
-            'N.I' => 'No Instalada',
+            'AL_AIRE' => 'Al Aire',
+            'FUERA_DEL_AIRE' => 'Fuera del Aire',
+            'NO_INSTALADA' => 'No Instalada',
             default => $estadoValue
         };
     }

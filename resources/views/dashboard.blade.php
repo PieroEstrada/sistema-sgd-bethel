@@ -288,7 +288,7 @@
 
         <!-- Fuera del Aire -->
         <div class="col-xl-3 col-md-6 mb-4">
-            <a href="{{ $estadisticasGenerales['estaciones_fuera_aire_url'] ?? route('estaciones.index', ['estado' => 'F.A']) }}" class="text-decoration-none">
+            <a href="{{ $estadisticasGenerales['estaciones_fuera_aire_url'] ?? route('estaciones.index', ['estado' => 'FUERA_DEL_AIRE']) }}" class="text-decoration-none">
                 <div class="card h-100" style="cursor: pointer; border-left: 4px solid #dc3545; background: linear-gradient(135deg, #ffe5e5 0%, #ffd6d6 100%);">
                     <div class="card-body">
                         <div class="row no-gutters align-items-center">
@@ -364,7 +364,7 @@
     <!-- A3) KPI Adicional: Disponibilidad Técnica (Uptime) -->
     <div class="row mb-4">
         <div class="col-xl-4 col-md-6 mb-4">
-            <a href="{{ $estadisticasGenerales['uptime_url'] ?? route('estaciones.index', ['estado' => 'A.A']) }}" class="text-decoration-none">
+            <a href="{{ $estadisticasGenerales['uptime_url'] ?? route('estaciones.index', ['estado' => 'AL_AIRE']) }}" class="text-decoration-none">
                 <div class="card h-100" style="cursor: pointer; border-left: 4px solid #17a2b8; background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);">
                     <div class="card-body">
                         <div class="row no-gutters align-items-center">
@@ -438,9 +438,9 @@
                             <label class="form-label small mb-1">Filtrar por Estado</label>
                             <select id="filtroEstado" class="form-select form-select-sm">
                                 <option value="">Todos los estados</option>
-                                <option value="A.A">Al Aire</option>
-                                <option value="F.A">Fuera del Aire</option>
-                                <option value="N.I">No Instalada</option>
+                                <option value="AL_AIRE">Al Aire</option>
+                                <option value="FUERA_DEL_AIRE">Fuera del Aire</option>
+                                <option value="NO_INSTALADA">No Instalada</option>
                             </select>
                         </div>
                         <div class="col-md-3">

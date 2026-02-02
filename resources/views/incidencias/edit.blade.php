@@ -23,7 +23,7 @@
                         <i class="fas fa-edit text-warning me-2"></i>
                         Editar Incidencia
                     </h1>
-                    <p class="text-muted">{{ $incidencia->codigo_incidencia }} - {{ $incidencia->descripcion_corta }}</p>
+                    <p class="text-muted">{{ $incidencia->codigo_incidencia }} - {{ $incidencia->titulo }}</p>
                 </div>
                 <div>
                     <a href="{{ route('incidencias.show', $incidencia) }}" class="btn btn-info me-2">
@@ -81,19 +81,23 @@
                                 @enderror
                             </div>
                             <div class="col-md-4">
-                                <label for="reportado_por" class="form-label">Reportado Por</label>
-                                <input type="text" class="form-control" id="reportado_por" 
-                                       value="{{ $incidencia->reportado_por }}" readonly>
+                                <label for="reportado_por_display" class="form-label">Reportado Por</label>
+                                <input type="text" class="form-control" id="reportado_por_display" 
+                                       value="{{ $incidencia->nombre_reportante }}" readonly>
                                 <small class="form-text text-muted">No se puede modificar el reportante</small>
                             </div>
                         </div>
 
+                        <!-- 
+                            El formulario envía 'descripcion_corta' y 'descripcion_detallada'.
+                            El controller update() los mapea a titulo y descripcion respectivamente.
+                        -->
                         <div class="row mb-3">
                             <div class="col-12">
-                                <label for="descripcion_corta" class="form-label">Descripción Corta <span class="text-danger">*</span></label>
+                                <label for="descripcion_corta" class="form-label">Descripción Corta (Título) <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control @error('descripcion_corta') is-invalid @enderror" 
                                        id="descripcion_corta" name="descripcion_corta" 
-                                       value="{{ old('descripcion_corta', $incidencia->descripcion_corta) }}" 
+                                       value="{{ old('descripcion_corta', $incidencia->titulo) }}" 
                                        placeholder="Resumen breve del problema" maxlength="255" required>
                                 @error('descripcion_corta')
                                     <div class="invalid-feedback">{{ $message }}</div>
@@ -107,7 +111,7 @@
                                 <textarea class="form-control @error('descripcion_detallada') is-invalid @enderror" 
                                           id="descripcion_detallada" name="descripcion_detallada" rows="4" 
                                           placeholder="Describe detalladamente el problema..." 
-                                          maxlength="2000" required>{{ old('descripcion_detallada', $incidencia->descripcion_detallada) }}</textarea>
+                                          maxlength="2000" required>{{ old('descripcion_detallada', $incidencia->descripcion) }}</textarea>
                                 <small class="form-text text-muted">
                                     <span id="contador_descripcion">0</span>/2000 caracteres
                                 </small>
@@ -146,7 +150,8 @@
                             <div class="col-md-3">
                                 <label for="estado" class="form-label">Estado <span class="text-danger">*</span></label>
                                 <select class="form-control @error('estado') is-invalid @enderror" 
-                                        id="estado" name="estado" required>
+                                        id="estado" name="estado" required
+                                        @if(!($camposEditables['puede_cambiar_estado'] ?? false)) disabled @endif>
                                     <option value="">Seleccionar estado</option>
                                     @foreach($estados as $key => $value)
                                         <option value="{{ $key }}" {{ old('estado', $incidencia->estado->value) == $key ? 'selected' : '' }}>
@@ -154,15 +159,19 @@
                                         </option>
                                     @endforeach
                                 </select>
+                                <!-- Si está disabled, enviar el valor actual oculto -->
+                                @if(!($camposEditables['puede_cambiar_estado'] ?? false))
+                                <input type="hidden" name="estado" value="{{ $incidencia->estado->value }}">
+                                @endif
                                 @error('estado')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
                             
                             <div class="col-md-3">
-                                <label for="categoria" class="form-label">Categoría <span class="text-danger">*</span></label>
+                                <label for="categoria" class="form-label">Categoría</label>
                                 <select class="form-control @error('categoria') is-invalid @enderror" 
-                                        id="categoria" name="categoria" required>
+                                        id="categoria" name="categoria">
                                     <option value="">Seleccionar categoría</option>
                                     @foreach($categorias as $key => $value)
                                         <option value="{{ $key }}" {{ old('categoria', $incidencia->categoria) == $key ? 'selected' : '' }}>
@@ -176,9 +185,9 @@
                             </div>
                             
                             <div class="col-md-3">
-                                <label for="impacto_servicio" class="form-label">Impacto en el Servicio <span class="text-danger">*</span></label>
+                                <label for="impacto_servicio" class="form-label">Impacto en el Servicio</label>
                                 <select class="form-control @error('impacto_servicio') is-invalid @enderror" 
-                                        id="impacto_servicio" name="impacto_servicio" required>
+                                        id="impacto_servicio" name="impacto_servicio">
                                     <option value="">Seleccionar impacto</option>
                                     <option value="bajo" {{ old('impacto_servicio', $incidencia->impacto_servicio) == 'bajo' ? 'selected' : '' }}>Bajo</option>
                                     <option value="medio" {{ old('impacto_servicio', $incidencia->impacto_servicio) == 'medio' ? 'selected' : '' }}>Medio</option>
@@ -201,50 +210,53 @@
 
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label for="asignado_a" class="form-label">Asignado A</label>
-                                <input type="text" class="form-control @error('asignado_a') is-invalid @enderror" 
-                                       id="asignado_a" name="asignado_a" 
-                                       value="{{ old('asignado_a', $incidencia->asignado_a) }}" 
-                                       placeholder="Nombre del responsable de la resolución" maxlength="255">
-                                @error('asignado_a')
+                                <label for="asignado_a_user_id" class="form-label">Asignado A</label>
+                                <select class="form-control @error('asignado_a_user_id') is-invalid @enderror" 
+                                        id="asignado_a_user_id" name="asignado_a_user_id"
+                                        @if(!($camposEditables['puede_asignar'] ?? false)) disabled @endif>
+                                    <option value="">Sin asignar</option>
+                                    @foreach($usuariosTecnicos as $usuario)
+                                        <option value="{{ $usuario->id }}" {{ old('asignado_a_user_id', $incidencia->asignado_a_user_id) == $usuario->id ? 'selected' : '' }}>
+                                            {{ $usuario->name }} ({{ $usuario->rol }})
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <!-- Si está disabled, enviar el valor actual oculto -->
+                                @if(!($camposEditables['puede_asignar'] ?? false))
+                                <input type="hidden" name="asignado_a_user_id" value="{{ $incidencia->asignado_a_user_id }}">
+                                @endif
+                                @error('asignado_a_user_id')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
+                                <small class="form-text text-muted">
+                                    @if($camposEditables['puede_asignar'] ?? false)
+                                        Seleccione el usuario que será responsable de resolver la incidencia.
+                                        Para transferir a otra <strong>área</strong>, use el botón "Transferir" en la vista de detalle.
+                                    @else
+                                        No tienes permisos para cambiar la asignación.
+                                    @endif
+                                </small>
                             </div>
                             
                             <div class="col-md-6">
-                                <label for="fecha_resolucion_estimada" class="form-label">Fecha de Resolución Estimada</label>
-                                <input type="datetime-local" class="form-control @error('fecha_resolucion_estimada') is-invalid @enderror" 
-                                       id="fecha_resolucion_estimada" name="fecha_resolucion_estimada" 
-                                       value="{{ old('fecha_resolucion_estimada', $incidencia->fecha_resolucion_estimada?->format('Y-m-d\TH:i')) }}">
-                                @error('fecha_resolucion_estimada')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
-
-                        <div class="row mb-3">
-                            <div class="col-12">
-                                <label for="acciones_tomadas" class="form-label">Acciones Tomadas</label>
-                                <textarea class="form-control @error('acciones_tomadas') is-invalid @enderror" 
-                                          id="acciones_tomadas" name="acciones_tomadas" rows="4" 
-                                          placeholder="Describe las acciones realizadas para resolver la incidencia..." 
-                                          maxlength="2000">{{ old('acciones_tomadas', $incidencia->acciones_tomadas) }}</textarea>
+                                <label class="form-label">Área Responsable</label>
+                                <input type="text" class="form-control" 
+                                       value="{{ $incidencia->area_responsable_actual ? ucfirst($incidencia->area_responsable_actual) : 'No asignada' }}" 
+                                       readonly>
                                 <small class="form-text text-muted">
-                                    <span id="contador_acciones">0</span>/2000 caracteres
+                                    Para cambiar el área, use el botón <strong>"Transferir"</strong> en la vista de detalle.
                                 </small>
-                                @error('acciones_tomadas')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
                             </div>
                         </div>
 
+                        <!-- Observaciones -->
                         <div class="row mb-3">
                             <div class="col-12">
-                                <label for="observaciones" class="form-label">Observaciones</label>
+                                <label for="observaciones" class="form-label">Observaciones Técnicas</label>
                                 <textarea class="form-control @error('observaciones') is-invalid @enderror" 
                                           id="observaciones" name="observaciones" rows="3" 
-                                          placeholder="Observaciones adicionales, notas, etc..." 
-                                          maxlength="1000">{{ old('observaciones', $incidencia->observaciones) }}</textarea>
+                                          placeholder="Observaciones adicionales, notas técnicas, etc..." 
+                                          maxlength="1000">{{ old('observaciones', $incidencia->observaciones_tecnicas) }}</textarea>
                                 <small class="form-text text-muted">
                                     <span id="contador_observaciones">0</span>/1000 caracteres
                                 </small>
@@ -254,7 +266,7 @@
                             </div>
                         </div>
 
-                        <!-- Información de Fechas -->
+                        <!-- Información de Fechas (solo lectura) -->
                         <div class="row mb-4">
                             <div class="col-12">
                                 <div class="alert alert-info">
@@ -262,11 +274,11 @@
                                     <strong>Información de fechas:</strong><br>
                                     <small>
                                         <strong>Fecha de reporte:</strong> {{ $incidencia->fecha_reporte->format('d/m/Y H:i:s') }}<br>
-                                        @if($incidencia->fecha_inicio_atencion)
-                                            <strong>Inicio de atención:</strong> {{ $incidencia->fecha_inicio_atencion->format('d/m/Y H:i:s') }}<br>
-                                        @endif
                                         @if($incidencia->fecha_resolucion)
                                             <strong>Fecha de resolución:</strong> {{ $incidencia->fecha_resolucion->format('d/m/Y H:i:s') }}<br>
+                                        @endif
+                                        @if($incidencia->fecha_ultima_transferencia)
+                                            <strong>Última transferencia:</strong> {{ $incidencia->fecha_ultima_transferencia->format('d/m/Y H:i:s') }}<br>
                                         @endif
                                         <strong>Última actualización:</strong> {{ $incidencia->updated_at->format('d/m/Y H:i:s') }}
                                     </small>
@@ -311,10 +323,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 const longitud = this.value.length;
                 counter.textContent = longitud;
                 
-                if (longitud > maxLength * 0.9) {
-                    counter.className = 'text-warning';
-                } else if (longitud > maxLength * 0.95) {
+                if (longitud > maxLength * 0.95) {
                     counter.className = 'text-danger';
+                } else if (longitud > maxLength * 0.8) {
+                    counter.className = 'text-warning';
                 } else {
                     counter.className = 'text-muted';
                 }
@@ -327,7 +339,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Configurar contadores
     setupCharacterCounter('descripcion_detallada', 'contador_descripcion', 2000);
-    setupCharacterCounter('acciones_tomadas', 'contador_acciones', 2000);
     setupCharacterCounter('observaciones', 'contador_observaciones', 1000);
     
     // Validación del estado
@@ -338,70 +349,17 @@ document.addEventListener('DOMContentLoaded', function() {
         estadoSelect.addEventListener('change', function() {
             const nuevoEstado = this.value;
             
-            // Validar transiciones de estado
-            if (estadoActual === 'cerrada' && nuevoEstado !== 'cerrada') {
-                if (confirm('¿Estás seguro de que quieres reabrir esta incidencia cerrada?')) {
-                    // Continuar
-                } else {
-                    this.value = 'cerrada';
-                }
-            }
-            
-            // Si se cambia a cerrada, preguntar por acciones
+            // Si se cambia a cerrada, preguntar por confirmación
             if (nuevoEstado === 'cerrada' && estadoActual !== 'cerrada') {
-                const accionesTomadas = document.getElementById('acciones_tomadas');
-                if (!accionesTomadas.value.trim()) {
-                    alert('Se recomienda agregar las acciones tomadas antes de cerrar la incidencia.');
-                    accionesTomadas.focus();
+                if (!confirm('¿Estás seguro de que quieres cerrar esta incidencia? Esta acción marcará la fecha de resolución.')) {
+                    this.value = estadoActual;
                 }
             }
-        });
-    }
-    
-    // Validación del formulario
-    const form = document.querySelector('form');
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            const estado = document.getElementById('estado').value;
-            const accionesTomadas = document.getElementById('acciones_tomadas').value;
-            
-            if (estado === 'cerrada' && !accionesTomadas.trim()) {
-                if (!confirm('Estás cerrando la incidencia sin describir las acciones tomadas. ¿Deseas continuar?')) {
-                    e.preventDefault();
-                    document.getElementById('acciones_tomadas').focus();
-                    return;
-                }
-            }
-            
-            if (estado === 'en_proceso') {
-                const asignadoA = document.getElementById('asignado_a').value;
-                if (!asignadoA.trim()) {
-                    if (confirm('Se recomienda asignar la incidencia a alguien cuando está en proceso. ¿Deseas continuar sin asignar?')) {
-                        // Continuar
-                    } else {
-                        e.preventDefault();
-                        document.getElementById('asignado_a').focus();
-                        return;
-                    }
-                }
-            }
-        });
-    }
-    
-    // Auto-sugerir fecha de resolución
-    const estadoSelectForDate = document.getElementById('estado');
-    const fechaResolucionInput = document.getElementById('fecha_resolucion_estimada');
-    
-    if (estadoSelectForDate && fechaResolucionInput) {
-        estadoSelectForDate.addEventListener('change', function() {
-            if (this.value === 'en_proceso' && !fechaResolucionInput.value) {
-                // Sugerir fecha 48 horas después
-                const fechaSugerida = new Date();
-                fechaSugerida.setHours(fechaSugerida.getHours() + 48);
-                const fechaFormateada = fechaSugerida.toISOString().slice(0, 16);
-                
-                if (confirm('¿Quieres establecer una fecha de resolución estimada para dentro de 48 horas?')) {
-                    fechaResolucionInput.value = fechaFormateada;
+
+            // Si se cambia a resuelta
+            if (nuevoEstado === 'resuelta' && estadoActual !== 'resuelta') {
+                if (!confirm('¿Estás seguro de que quieres marcar esta incidencia como resuelta?')) {
+                    this.value = estadoActual;
                 }
             }
         });

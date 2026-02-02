@@ -20,6 +20,8 @@ class Incidencia extends Model
     protected $fillable = [
         'titulo',
         'tipo',
+        'categoria',
+        'impacto_servicio',
         'descripcion',
         'estacion_id',
         'prioridad',
@@ -53,7 +55,8 @@ class Incidencia extends Model
         'requiere_visita_tecnica' => 'boolean',
         'costo_soles' => 'decimal:2',
         'costo_dolares' => 'decimal:2',
-        'tiempo_respuesta_estimado' => 'integer'
+        'tiempo_respuesta_estimado' => 'integer',
+        'contador_transferencias' => 'integer'
     ];
 
     protected $dates = [
@@ -117,6 +120,37 @@ class Incidencia extends Model
     {
         return $this->hasMany(IncidenciaHistorial::class, 'incidencia_id')
                     ->orderBy('created_at', 'desc');
+    }
+
+    // =====================================================
+    // ACCESSORS DE COMPATIBILIDAD (BLADE ↔ BD)
+    // Las vistas usan descripcion_corta / descripcion_detallada pero en BD
+    // solo existen titulo / descripcion. Estos accessors hacen el puente.
+    // =====================================================
+
+    /**
+     * descripcion_corta → titulo
+     */
+    public function getDescripcionCortaAttribute(): ?string
+    {
+        return $this->titulo;
+    }
+
+    /**
+     * descripcion_detallada → descripcion
+     */
+    public function getDescripcionDetalladaAttribute(): ?string
+    {
+        return $this->descripcion;
+    }
+
+    /**
+     * observaciones → observaciones_tecnicas
+     * Las vistas usan "observaciones" pero en BD se llama "observaciones_tecnicas"
+     */
+    public function getObservacionesAttribute(): ?string
+    {
+        return $this->observaciones_tecnicas;
     }
 
     // =====================================================
@@ -398,6 +432,7 @@ class Incidencia extends Model
     public function asignarA(int $userId, ?string $observaciones = null): bool
     {
         $this->asignado_a_user_id = $userId;
+        $this->asignado_a = $userId; // Sincronizar campo legacy
         
         if ($this->estado_value === 'abierta') {
             $this->estado = 'en_proceso';
@@ -432,11 +467,10 @@ class Incidencia extends Model
     }
 
     /**
-     * Transferir responsabilidad a otra área/usuario
+     * Transferir responsabilidad a otra área
      *
-     * @param string|null $nuevaArea Área destino (Técnica, Logística, Operaciones, etc.)
-     * @param int|null $nuevoResponsableId ID del nuevo usuario responsable
-     * @param string $observaciones Motivo de la transferencia (obligatorio)
+     * @param string $nuevaArea Área destino (ingenieria, logistica, operaciones, etc.)
+     * @param string $observaciones Motivo de la transferencia
      * @param int $usuarioAccionId ID del usuario que realiza la transferencia
      * @return bool
      */
@@ -447,14 +481,21 @@ class Incidencia extends Model
     ): bool {
         $areaAnterior = $this->area_responsable_actual;
 
+        // Actualizar campos de la incidencia
         $this->area_responsable_actual = $nuevaArea;
-        $this->contador_transferencias = ($this->contador_transferencias ?? 0) + 1;
+        $this->contador_transferencias = (int)($this->contador_transferencias ?? 0) + 1;
         $this->fecha_ultima_transferencia = now();
+
+        // Si estaba abierta, cambiar a en_proceso al transferir
+        if ($this->estado_value === 'abierta') {
+            $this->estado = 'en_proceso';
+        }
 
         if (!$this->save()) {
             return false;
         }
 
+        // Registrar en historial
         IncidenciaHistorial::registrarTransferenciaArea(
             $this,
             $areaAnterior,
@@ -477,27 +518,32 @@ class Incidencia extends Model
         // Evento antes de eliminar (soft delete)
         static::deleting(function ($incidencia) {
             // Registrar en auditoría antes de eliminar
-            DB::table('auditoria_incidencias')->insert([
-                'incidencia_id' => $incidencia->id,
-                'codigo_incidencia' => $incidencia->codigo_incidencia,
-                'accion' => 'ELIMINACION',
-                'usuario_id' => auth()->id(),
-                'usuario_nombre' => auth()->user()->name ?? 'Sistema',
-                'datos_incidencia' => json_encode([
-                    'titulo' => $incidencia->titulo,
-                    'descripcion' => $incidencia->descripcion,
-                    'estacion_codigo' => $incidencia->estacion->codigo ?? null,
-                    'prioridad' => $incidencia->prioridad_value,
-                    'estado' => $incidencia->estado_value,
-                    'reportante' => $incidencia->nombre_reportante,
-                    'asignado' => $incidencia->nombre_asignado,
-                    'fecha_reporte' => $incidencia->fecha_reporte,
-                    'fecha_eliminacion' => now()
-                ]),
-                'ip_address' => request()->ip(),
-                'user_agent' => request()->userAgent(),
-                'created_at' => now()
-            ]);
+            try {
+                DB::table('auditoria_incidencias')->insert([
+                    'incidencia_id' => $incidencia->id,
+                    'codigo_incidencia' => $incidencia->codigo_incidencia,
+                    'accion' => 'ELIMINACION',
+                    'usuario_id' => auth()->id(),
+                    'usuario_nombre' => auth()->user()->name ?? 'Sistema',
+                    'datos_incidencia' => json_encode([
+                        'titulo' => $incidencia->titulo,
+                        'descripcion' => $incidencia->descripcion,
+                        'estacion_codigo' => $incidencia->estacion->codigo ?? null,
+                        'prioridad' => $incidencia->prioridad_value,
+                        'estado' => $incidencia->estado_value,
+                        'reportante' => $incidencia->nombre_reportante,
+                        'asignado' => $incidencia->nombre_asignado,
+                        'fecha_reporte' => $incidencia->fecha_reporte,
+                        'fecha_eliminacion' => now()
+                    ]),
+                    'ip_address' => request()->ip(),
+                    'user_agent' => request()->userAgent(),
+                    'created_at' => now()
+                ]);
+            } catch (\Exception $e) {
+                // Si la tabla auditoria no existe aún, no bloquear la eliminación
+                \Illuminate\Support\Facades\Log::warning('Auditoría de eliminación no disponible: ' . $e->getMessage());
+            }
         });
 
         // Evento al crear nueva incidencia
@@ -508,6 +554,10 @@ class Incidencia extends Model
 
             if (!$incidencia->reportado_por_user_id && auth()->check()) {
                 $incidencia->reportado_por_user_id = auth()->id();
+                // Sincronizar campo legacy
+                if (!$incidencia->reportado_por) {
+                    $incidencia->reportado_por = auth()->id();
+                }
             }
         });
     }

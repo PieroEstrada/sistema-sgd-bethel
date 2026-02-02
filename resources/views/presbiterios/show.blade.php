@@ -163,7 +163,7 @@
                                                 Al Aire
                                             </div>
                                             <div class="h4 mb-0 font-weight-bold text-gray-800">
-                                                {{ $presbiterio->estaciones->where('estado', 'A.A')->count() }}
+                                                {{ $presbiterio->estaciones->where('estado', \App\Enums\EstadoEstacion::AL_AIRE)->count() }}
                                             </div>
                                         </div>
                                         <div class="col-auto">
@@ -221,9 +221,9 @@
                                     @php
                                         $estadoEstacion = $estacion->estado->value ?? $estacion->estado;
                                         $estadoConfig = [
-                                            'A.A' => ['class' => 'success', 'label' => 'Al Aire'],
-                                            'F.A' => ['class' => 'danger', 'label' => 'Fuera del Aire'],
-                                            'N.I' => ['class' => 'secondary', 'label' => 'No Instalada'],
+                                            'AL_AIRE' => ['class' => 'success', 'label' => 'Al Aire'],
+                                            'FUERA_DEL_AIRE' => ['class' => 'danger', 'label' => 'Fuera del Aire'],
+                                            'NO_INSTALADA' => ['class' => 'secondary', 'label' => 'No Instalada'],
                                         ];
                                         $config = $estadoConfig[$estadoEstacion] ?? ['class' => 'secondary', 'label' => $estadoEstacion];
                                     @endphp

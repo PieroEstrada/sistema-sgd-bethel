@@ -62,7 +62,7 @@
                             </small>
                         </div>
                         <div class="col-auto">
-                            <i class="fas fa-{{ $estacion->estado->value === 'A.A' ? 'check-circle text-success' : 'times-circle text-danger' }} fa-2x"></i>
+                            <i class="fas fa-{{ $estacion->estado->value === 'AL_AIRE' ? 'check-circle text-success' : 'times-circle text-danger' }} fa-2x"></i>
                         </div>
                     </div>
                 </div>
@@ -258,7 +258,7 @@
     </div>
 
     <!-- Información F.A. (solo si está fuera del aire) -->
-    @if($estacion->estado->value === 'F.A')
+    @if($estacion->estado->value === 'FUERA_DEL_AIRE')
     <div class="row mb-4">
         <div class="col-12">
             <div class="card shadow border-danger">

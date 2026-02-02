@@ -380,11 +380,28 @@
                             </td>
                             <td class="text-center">
                                 @if($tramite->documento_principal_nombre)
-                                    <a href="{{ Storage::url($tramite->documento_principal_ruta) }}" target="_blank" title="{{ $tramite->documento_principal_nombre }}">
-                                        <i class="fas fa-file-pdf fa-lg text-danger"></i>
-                                    </a>
+                                    <div class="d-flex align-items-center justify-content-center gap-1">
+                                        <a href="{{ Storage::url($tramite->documento_principal_ruta) }}" target="_blank" title="{{ $tramite->documento_principal_nombre }}">
+                                            <i class="fas fa-file-pdf fa-lg text-danger"></i>
+                                        </a>
+                                        <form action="{{ route('tramites.eliminar-documento', $tramite) }}" method="POST" class="d-inline"
+                                              onsubmit="return confirm('Eliminar documento principal: {{ $tramite->documento_principal_nombre }}?')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-link btn-sm p-0 text-danger" title="Eliminar documento">
+                                                <i class="fas fa-times-circle"></i>
+                                            </button>
+                                        </form>
+                                    </div>
                                 @else
-                                    <i class="fas fa-file fa-lg text-muted" title="Sin documento"></i>
+                                    <form action="{{ route('tramites.subir-documento', $tramite) }}" method="POST" enctype="multipart/form-data" class="d-inline">
+                                        @csrf
+                                        <label class="btn btn-link btn-sm p-0 text-primary mb-0" title="Subir documento principal" style="cursor: pointer;">
+                                            <i class="fas fa-upload"></i>
+                                            <input type="file" name="documento_principal" class="d-none" accept=".pdf,.doc,.docx"
+                                                   onchange="this.closest('form').submit()">
+                                        </label>
+                                    </form>
                                 @endif
                             </td>
                             <td>

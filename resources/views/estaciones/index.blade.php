@@ -272,13 +272,13 @@
                                 Sector
                                 <i class="fas fa-sort ms-1 sort-icon" data-columna="sector"></i>
                             </th>
-                            <th class="col-licencia sortable" onclick="ordenarPor('licencia_vencimiento')">
+                            <th class="col-licencia sortable" onclick="ordenarPor('licencia_vence')">
                                 Licencia Vence
-                                <i class="fas fa-sort ms-1 sort-icon" data-columna="licencia_vencimiento"></i>
+                                <i class="fas fa-sort ms-1 sort-icon" data-columna="licencia_vence"></i>
                             </th>
-                            <th class="col-riesgo sortable" onclick="ordenarPor('licencia_riesgo')">
+                            <th class="col-riesgo sortable" onclick="ordenarPor('riesgo_licencia')">
                                 Riesgo
-                                <i class="fas fa-sort ms-1 sort-icon" data-columna="licencia_riesgo"></i>
+                                <i class="fas fa-sort ms-1 sort-icon" data-columna="riesgo_licencia"></i>
                             </th>
                             <th class="col-incidencias">Incidencias</th>
                             <th class="col-acciones">Acciones</th>
@@ -322,8 +322,8 @@
                                 @endif
                             </td>
                             <td class="col-estado">
-                                <span class="badge bg-{{ $estacion->estado->value == 'A.A' ? 'success' : ($estacion->estado->value == 'F.A' ? 'danger' : 'warning') }}">
-                                    {{ $estacion->estado->name }}
+                                <span class="badge bg-{{ $estacion->estado->value == 'AL_AIRE' ? 'success' : ($estacion->estado->value == 'FUERA_DEL_AIRE' ? 'danger' : 'warning') }}">
+                                    {{ $estacion->estado->label() }}
                                 </span>
                             </td>
                             <td class="col-sector">
@@ -331,9 +331,9 @@
                             </td>
                             <!-- Licencia Vence -->
                             <td class="col-licencia">
-                                @if($estacion->licencia_vencimiento)
+                                @if($estacion->licencia_vence)
                                     @php
-                                        $fechaVenc = \Carbon\Carbon::parse($estacion->licencia_vencimiento);
+                                        $fechaVenc = \Carbon\Carbon::parse($estacion->licencia_vence);
                                         $esVencida = $fechaVenc->isPast();
                                     @endphp
                                     <span class="{{ $esVencida ? 'text-danger fw-bold' : '' }}">
@@ -355,19 +355,19 @@
                             </td>
                             <!-- Riesgo -->
                             <td class="col-riesgo">
-                                @if($estacion->licencia_riesgo)
+                                @if($estacion->riesgo_licencia)
                                     @php
-                                        $riesgoColor = match($estacion->licencia_riesgo->value ?? $estacion->licencia_riesgo) {
+                                        $riesgoColor = match($estacion->riesgo_licencia->value ?? $estacion->riesgo_licencia) {
                                             'ALTO' => 'danger',
                                             'MEDIO' => 'warning',
                                             'SEGURO' => 'success',
                                             default => 'secondary'
                                         };
-                                        $riesgoLabel = match($estacion->licencia_riesgo->value ?? $estacion->licencia_riesgo) {
+                                        $riesgoLabel = match($estacion->riesgo_licencia->value ?? $estacion->riesgo_licencia) {
                                             'ALTO' => 'Alto',
                                             'MEDIO' => 'Medio',
                                             'SEGURO' => 'Seguro',
-                                            default => $estacion->licencia_riesgo
+                                            default => $estacion->riesgo_licencia
                                         };
                                     @endphp
                                     <span class="badge bg-{{ $riesgoColor }}">{{ $riesgoLabel }}</span>
@@ -488,9 +488,9 @@
                             <label class="form-label small fw-bold">Estado Operativo</label>
                             <select name="estado" class="form-select form-select-sm">
                                 <option value="">Todos los estados</option>
-                                <option value="A.A" {{ request('estado') == 'A.A' ? 'selected' : '' }}>Al Aire</option>
-                                <option value="F.A" {{ request('estado') == 'F.A' ? 'selected' : '' }}>Fuera del Aire</option>
-                                <option value="N.I" {{ request('estado') == 'N.I' ? 'selected' : '' }}>No Instalada</option>
+                                <option value="AL_AIRE" {{ request('estado') == 'AL_AIRE' ? 'selected' : '' }}>Al Aire</option>
+                                <option value="FUERA_DEL_AIRE" {{ request('estado') == 'FUERA_DEL_AIRE' ? 'selected' : '' }}>Fuera del Aire</option>
+                                <option value="NO_INSTALADA" {{ request('estado') == 'NO_INSTALADA' ? 'selected' : '' }}>No Instalada</option>
                             </select>
                         </div>
                         <div class="col-md-3">
@@ -580,11 +580,11 @@
                             </div>
                             <p class="text-primary small fw-bold mb-2 mt-3">Licencias</p>
                             <div class="form-check mb-2">
-                                <input class="form-check-input columna-check" type="checkbox" name="columnas[]" value="licencia_vencimiento" id="col_licencia_vence">
+                                <input class="form-check-input columna-check" type="checkbox" name="columnas[]" value="licencia_vence" id="col_licencia_vence">
                                 <label class="form-check-label" for="col_licencia_vence">Fecha Vencimiento Licencia</label>
                             </div>
                             <div class="form-check mb-2">
-                                <input class="form-check-input columna-check" type="checkbox" name="columnas[]" value="licencia_riesgo" id="col_licencia_riesgo">
+                                <input class="form-check-input columna-check" type="checkbox" name="columnas[]" value="riesgo_licencia" id="col_licencia_riesgo">
                                 <label class="form-check-label" for="col_licencia_riesgo">Nivel de Riesgo</label>
                             </div>
                         </div>

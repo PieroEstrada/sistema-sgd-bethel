@@ -56,7 +56,7 @@ class NotificationController extends Controller
 
         // Tipos de notificación para filtros
         $tipos = [
-            'licencia_vencimiento' => 'Licencias por vencer',
+            'licencia_vence' => 'Licencias por vencer',
             'licencia_vencida' => 'Licencias vencidas',
             'estacion_fuera_aire' => 'Estaciones fuera del aire',
             'incidencia_estancada' => 'Incidencias estancadas',

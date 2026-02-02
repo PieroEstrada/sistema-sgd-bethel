@@ -50,17 +50,17 @@ class DashboardController extends Controller
             'total_estaciones' => $totalEstaciones,
             'total_estaciones_url' => route('estaciones.index'),
             'estaciones_al_aire' => $estacionesAlAire,
-            'estaciones_al_aire_url' => route('estaciones.index', ['estado' => 'A.A']),
+            'estaciones_al_aire_url' => route('estaciones.index', ['estado' => 'AL_AIRE']),
             'estaciones_al_aire_porcentaje' => $porcentajeAlAire,
             'estaciones_fuera_aire' => $estacionesFueraAire,
-            'estaciones_fuera_aire_url' => route('estaciones.index', ['estado' => 'F.A']),
+            'estaciones_fuera_aire_url' => route('estaciones.index', ['estado' => 'FUERA_DEL_AIRE']),
             'estaciones_fuera_aire_porcentaje' => $porcentajeFueraAire,
             'estaciones_no_instaladas' => $estacionesNoInstaladas,
-            'estaciones_no_instaladas_url' => route('estaciones.index', ['estado' => 'N.I']),
+            'estaciones_no_instaladas_url' => route('estaciones.index', ['estado' => 'NO_INSTALADA']),
             'estaciones_en_renovacion' => $estacionesEnRenovacion,
             'estaciones_en_renovacion_url' => route('estaciones.index', ['renovacion' => '1']),
             'uptime_porcentaje' => $uptimePorcentaje,
-            'uptime_url' => route('estaciones.index', ['estado' => 'A.A']),
+            'uptime_url' => route('estaciones.index', ['estado' => 'AL_AIRE']),
             'incidencias_abiertas' => Incidencia::where('estado', EstadoIncidencia::ABIERTA)
                 ->where('estado', '!=', EstadoIncidencia::INFORMATIVO)->count(),
             'incidencias_abiertas_url' => route('incidencias.index', ['estado' => 'abierta']),
@@ -95,7 +95,7 @@ class DashboardController extends Controller
                 'al_aire_porcentaje' => $totalSector > 0 ? round(($alAireSector / $totalSector) * 100, 1) : 0,
                 'fuera_aire' => $fueraAireSector,
                 'fuera_aire_porcentaje' => $totalSector > 0 ? round(($fueraAireSector / $totalSector) * 100, 1) : 0,
-                'url_fuera_aire' => route('estaciones.index', ['sector' => $sector->value, 'estado' => 'F.A']),
+                'url_fuera_aire' => route('estaciones.index', ['sector' => $sector->value, 'estado' => 'FUERA_DEL_AIRE']),
                 'incidencias' => Incidencia::whereHas('estacion', function($query) use ($sector) {
                     $query->where('sector', $sector);
                 })->where('estado', '!=', EstadoIncidencia::CERRADA)
@@ -217,18 +217,20 @@ class DashboardController extends Controller
         ];
 
         // ========== RADAR DE RIESGO REGULATORIO (Licencias) ==========
-        $riesgoAltoCount = Estacion::where('licencia_riesgo', RiesgoLicencia::ALTO)->count();
-        $riesgoMedioCount = Estacion::where('licencia_riesgo', RiesgoLicencia::MEDIO)->count();
-        $riesgoSeguroCount = Estacion::where('licencia_riesgo', RiesgoLicencia::SEGURO)->count();
-        $sinEvaluarCount = Estacion::whereNull('licencia_riesgo')->count();
+        $riesgoAltoCount = Estacion::where('riesgo_licencia', RiesgoLicencia::ALTO)->count();
+        $riesgoMedioCount = Estacion::where('riesgo_licencia', RiesgoLicencia::MEDIO)->count();
+        $riesgoSeguroCount = Estacion::where('riesgo_licencia', RiesgoLicencia::SEGURO)->count();
+        $sinEvaluarCount = Estacion::whereNull('riesgo_licencia')->count();
         $totalConLicencia = $riesgoAltoCount + $riesgoMedioCount + $riesgoSeguroCount;
 
-        // Estaciones vencidas (meses restantes negativos)
-        $vencidasCount = Estacion::where('licencia_meses_restantes', '<', 0)->count();
+        // Estaciones vencidas (licencia_vence < hoy)
+        $vencidasCount = Estacion::whereNotNull('licencia_vence')
+            ->where('licencia_vence', '<', DB::raw('CURDATE()'))->count();
 
         // Próximas a vencer (<=6 meses)
-        $urgentesCount = Estacion::where('licencia_meses_restantes', '>', 0)
-            ->where('licencia_meses_restantes', '<=', 6)->count();
+        $urgentesCount = Estacion::whereNotNull('licencia_vence')
+            ->where('licencia_vence', '>=', DB::raw('CURDATE()'))
+            ->where('licencia_vence', '<=', DB::raw('DATE_ADD(CURDATE(), INTERVAL 6 MONTH)'))->count();
 
         $radarRiesgoRegulatorio = [
             'alto' => [
@@ -270,9 +272,9 @@ class DashboardController extends Controller
         foreach (Sector::cases() as $sector) {
             $riesgoPorSector[$sector->value] = [
                 'label' => $sector->label(),
-                'alto' => Estacion::where('sector', $sector)->where('licencia_riesgo', RiesgoLicencia::ALTO)->count(),
-                'medio' => Estacion::where('sector', $sector)->where('licencia_riesgo', RiesgoLicencia::MEDIO)->count(),
-                'seguro' => Estacion::where('sector', $sector)->where('licencia_riesgo', RiesgoLicencia::SEGURO)->count(),
+                'alto' => Estacion::where('sector', $sector)->where('riesgo_licencia', RiesgoLicencia::ALTO)->count(),
+                'medio' => Estacion::where('sector', $sector)->where('riesgo_licencia', RiesgoLicencia::MEDIO)->count(),
+                'seguro' => Estacion::where('sector', $sector)->where('riesgo_licencia', RiesgoLicencia::SEGURO)->count(),
             ];
         }
 
@@ -612,10 +614,10 @@ class DashboardController extends Controller
         }
 
         // Radar de riesgo regulatorio
-        $riesgoAltoCount = Estacion::where('licencia_riesgo', RiesgoLicencia::ALTO)->count();
-        $riesgoMedioCount = Estacion::where('licencia_riesgo', RiesgoLicencia::MEDIO)->count();
-        $riesgoSeguroCount = Estacion::where('licencia_riesgo', RiesgoLicencia::SEGURO)->count();
-        $sinEvaluarCount = Estacion::whereNull('licencia_riesgo')->count();
+        $riesgoAltoCount = Estacion::where('riesgo_licencia', RiesgoLicencia::ALTO)->count();
+        $riesgoMedioCount = Estacion::where('riesgo_licencia', RiesgoLicencia::MEDIO)->count();
+        $riesgoSeguroCount = Estacion::where('riesgo_licencia', RiesgoLicencia::SEGURO)->count();
+        $sinEvaluarCount = Estacion::whereNull('riesgo_licencia')->count();
         $totalConLicencia = $riesgoAltoCount + $riesgoMedioCount + $riesgoSeguroCount;
 
         $radarRiesgoRegulatorio = [
@@ -727,17 +729,17 @@ class DashboardController extends Controller
                     // Determinar el color según el estado (solo 3 estados válidos)
                     $estadoValue = is_object($estacion->estado) ? $estacion->estado->value : $estacion->estado;
                     $color = match($estadoValue) {
-                        'A.A' => '#28a745',  // Verde
-                        'F.A' => '#dc3545',  // Rojo
-                        'N.I' => '#6c757d',  // Gris
+                        'AL_AIRE' => '#28a745',
+                        'FUERA_DEL_AIRE' => '#dc3545',
+                        'NO_INSTALADA' => '#6c757d',
                         default => '#007bff'
                     };
 
                     // Determinar nombres legibles
                     $estadoTexto = match($estadoValue) {
-                        'A.A' => 'Al Aire',
-                        'F.A' => 'Fuera del Aire',
-                        'N.I' => 'No Instalada',
+                        'AL_AIRE' => 'Al Aire',
+                        'FUERA_DEL_AIRE' => 'Fuera del Aire',
+                        'NO_INSTALADA' => 'No Instalada',
                         default => 'Desconocido'
                     };
 

@@ -86,8 +86,8 @@ class Presbitero extends Model
     {
         return [
             'total_estaciones' => $this->estaciones()->count(),
-            'estaciones_al_aire' => $this->estaciones()->where('estado', 'A.A')->count(),
-            'estaciones_fuera_aire' => $this->estaciones()->where('estado', 'F.A')->count(),
+            'estaciones_al_aire' => $this->estaciones()->where('estado', 'AL_AIRE')->count(),
+            'estaciones_fuera_aire' => $this->estaciones()->where('estado', 'FUERA_DEL_AIRE')->count(),
             'incidencias_abiertas' => Incidencia::whereIn('estacion_id', $this->estaciones->pluck('id'))
                                                 ->whereIn('estado', ['abierta', 'en_proceso'])
                                                 ->count(),

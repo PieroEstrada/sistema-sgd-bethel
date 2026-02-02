@@ -113,7 +113,7 @@ class TicketSeeder extends Seeder
                     'banda' => 'FM',
                     'potencia_watts' => 1000,
                     'sector' => 'CENTRO',
-                    'estado' => 'A.A',
+                    'estado' => 'AL_AIRE',
                 ]);
             }
 

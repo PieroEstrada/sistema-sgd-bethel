@@ -4,9 +4,9 @@ namespace App\Enums;
 
 enum EstadoEstacion: string
 {
-    case AL_AIRE = 'A.A';          // Al aire (funcionando)
-    case FUERA_DEL_AIRE = 'F.A';   // Fuera del aire
-    case NO_INSTALADA = 'N.I';      // No instalada
+    case AL_AIRE = 'AL_AIRE';
+    case FUERA_DEL_AIRE = 'FUERA_DEL_AIRE';
+    case NO_INSTALADA = 'NO_INSTALADA';
 
     public function getLabel(): string
     {

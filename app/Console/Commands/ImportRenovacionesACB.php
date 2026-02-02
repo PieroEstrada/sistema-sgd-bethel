@@ -143,23 +143,21 @@ class ImportRenovacionesACB extends Command
             // Fecha vencimiento
             $venceRaw = $r[$colVence] ?? null;
             $vence = $this->parseExcelDate($venceRaw);
-            $estacion->licencia_vencimiento = $vence;
+            $estacion->licencia_vence = $vence;
 
-            // Riesgo + meses restantes (si hay fecha)
+            // Riesgo (si hay fecha). licencia_meses_restantes se calcula dinámicamente via accessor.
             if ($vence) {
                 $months = Carbon::today()->diffInMonths($vence, false); // negativo si ya venció
-                $estacion->licencia_meses_restantes = $months;
 
                 if ($months <= 0) {
-                    $estacion->licencia_riesgo = 'ALTO';
+                    $estacion->riesgo_licencia = 'ALTO';
                 } elseif ($months <= 6) {
-                    $estacion->licencia_riesgo = 'MEDIO';
+                    $estacion->riesgo_licencia = 'MEDIO';
                 } else {
-                    $estacion->licencia_riesgo = 'SEGURO';
+                    $estacion->riesgo_licencia = 'SEGURO';
                 }
             } else {
-                $estacion->licencia_meses_restantes = null;
-                $estacion->licencia_riesgo = null;
+                $estacion->riesgo_licencia = null;
             }
 
             $estacion->save();

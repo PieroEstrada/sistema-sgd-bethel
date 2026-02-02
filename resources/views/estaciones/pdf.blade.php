@@ -331,24 +331,24 @@
                                 @php
                                     $estadoValue = is_object($estacion->estado) ? $estacion->estado->value : $estacion->estado;
                                     $estadoClass = match($estadoValue) {
-                                        'A.A' => 'badge-success',
-                                        'F.A' => 'badge-danger',
-                                        'N.I' => 'badge-secondary',
+                                        'AL_AIRE' => 'badge-success',
+                                        'FUERA_DEL_AIRE' => 'badge-danger',
+                                        'NO_INSTALADA' => 'badge-secondary',
                                         default => 'badge-info'
                                     };
                                     $estadoLabel = match($estadoValue) {
-                                        'A.A' => 'Al Aire',
-                                        'F.A' => 'F. Aire',
-                                        'N.I' => 'No Inst.',
+                                        'AL_AIRE' => 'Al Aire',
+                                        'FUERA_DEL_AIRE' => 'F. Aire',
+                                        'NO_INSTALADA' => 'No Inst.',
                                         default => $estadoValue
                                     };
                                 @endphp
                                 <span class="badge {{ $estadoClass }}">{{ $estadoLabel }}</span>
                                 @break
-                            @case('licencia_riesgo')
-                                @if($estacion->licencia_riesgo)
+                            @case('riesgo_licencia')
+                                @if($estacion->riesgo_licencia)
                                     @php
-                                        $riesgoValue = is_object($estacion->licencia_riesgo) ? $estacion->licencia_riesgo->value : $estacion->licencia_riesgo;
+                                        $riesgoValue = is_object($estacion->riesgo_licencia) ? $estacion->riesgo_licencia->value : $estacion->riesgo_licencia;
                                         $riesgoClass = match($riesgoValue) {
                                             'ALTO' => 'badge-danger',
                                             'MEDIO' => 'badge-warning',
@@ -383,10 +383,10 @@
                                     {{ $estacion->frecuencia ? $estacion->frecuencia . ' MHz' : '-' }}
                                 @endif
                                 @break
-                            @case('licencia_vencimiento')
-                                @if($estacion->licencia_vencimiento)
+                            @case('licencia_vence')
+                                @if($estacion->licencia_vence)
                                     @php
-                                        $fecha = \Carbon\Carbon::parse($estacion->licencia_vencimiento);
+                                        $fecha = \Carbon\Carbon::parse($estacion->licencia_vence);
                                         $mesesRestantes = now()->diffInMonths($fecha, false);
                                         $colorClase = $mesesRestantes < 12 ? 'danger' : ($mesesRestantes <= 24 ? 'warning' : 'success');
                                     @endphp

@@ -392,7 +392,7 @@ class EstacionSeeder extends Seeder
         $this->command->info('   - Norte: ' . Estacion::where('sector', 'NORTE')->count());
         $this->command->info('   - Centro: ' . Estacion::where('sector', 'CENTRO')->count());
         $this->command->info('   - Sur: ' . Estacion::where('sector', 'SUR')->count());
-        $this->command->info('   - Al aire: ' . Estacion::where('estado', 'A.A')->count());
-        $this->command->info('   - Fuera del aire: ' . Estacion::where('estado', 'F.A')->count());
+        $this->command->info('   - Al aire: ' . Estacion::where('estado', EstadoEstacion::AL_AIRE)->count());
+        $this->command->info('   - Fuera del aire: ' . Estacion::where('estado', EstadoEstacion::FUERA_DEL_AIRE)->count());
     }
 }

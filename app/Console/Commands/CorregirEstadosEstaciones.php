@@ -52,7 +52,7 @@ class CorregirEstadosEstaciones extends Command
         try {
             // 1. Cambiar todas las estaciones MANT a F.A.
             $this->info('1. Buscando estaciones en estado MANT (Mantenimiento)...');
-            $estacionesMant = Estacion::where('estado', 'MANT')->get();
+            $estacionesMant = Estacion::where('estado', 'MANTENIMIENTO')->get();
 
             if ($estacionesMant->count() > 0) {
                 foreach ($estacionesMant as $estacion) {
@@ -70,7 +70,7 @@ class CorregirEstadosEstaciones extends Command
 
             // 2. Cambiar estaciones N.I. que NO están en la lista a A.A.
             $this->info('2. Verificando estaciones N.I. que no deberían serlo...');
-            $estacionesNiActuales = Estacion::where('estado', 'N.I')->get();
+            $estacionesNiActuales = Estacion::where('estado', 'NO_INSTALADA')->get();
 
             foreach ($estacionesNiActuales as $estacion) {
                 if (!$this->esEstacionNoInstalada($estacion->localidad)) {
@@ -149,9 +149,9 @@ class CorregirEstadosEstaciones extends Command
             $this->table(
                 ['Estado', 'Cantidad'],
                 [
-                    ['Al Aire (A.A)', Estacion::where('estado', 'A.A')->count()],
-                    ['Fuera del Aire (F.A)', Estacion::where('estado', 'F.A')->count()],
-                    ['No Instalada (N.I)', Estacion::where('estado', 'N.I')->count()],
+                    ['Al Aire (AL_AIRE)', Estacion::where('estado', 'AL_AIRE')->count()],
+                    ['Fuera del Aire (FUERA_DEL_AIRE)', Estacion::where('estado', 'FUERA_DEL_AIRE')->count()],
+                    ['No Instalada (NO_INSTALADA)', Estacion::where('estado', 'NO_INSTALADA')->count()],
                     ['TOTAL', Estacion::count()]
                 ]
             );

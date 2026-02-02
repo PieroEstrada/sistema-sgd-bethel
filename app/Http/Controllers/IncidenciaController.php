@@ -20,33 +20,29 @@ use Carbon\Carbon;
 class IncidenciaController extends Controller
 {
     /**
-     * Mostrar lista de incidencias - ✅ ACTUALIZADO PARA NUEVOS ROLES
+     * Mostrar lista de incidencias
      */
     public function index(Request $request)
     {
         $user = Auth::user();
         
-        // ✅ MANEJAR TRANSICIÓN DE ROLES
         try {
             $userRole = $user->rol instanceof RolUsuario
                 ? $user->rol
                 : RolUsuario::from((string) $user->rol);
         } catch (\ValueError $e) {
-            // Si rol antiguo no existe en enum, usar visor por defecto
             $userRole = RolUsuario::VISOR;
         }
 
-        // 🎯 BASE QUERY CON RELACIONES (MANTENER TU IMPLEMENTACIÓN)
         $query = Incidencia::with([
             'estacion:id,codigo,localidad,razon_social,sector',  
             'reportadoPorUsuario:id,name,rol,email,telefono',  
             'asignadoAUsuario:id,name,rol,email,telefono'     
         ]);
 
-        // 🔐 APLICAR FILTROS POR ROL - ✅ ACTUALIZADO
         $this->aplicarFiltrosPorRol($query, $userRole, $user);
 
-        // 📊 APLICAR FILTROS DE BÚSQUEDA (MANTENER TU IMPLEMENTACIÓN)
+        // Filtros de búsqueda
         if ($request->filled('estacion_id')) {
             $query->where('estacion_id', $request->estacion_id);
         }
@@ -70,7 +66,6 @@ class IncidenciaController extends Controller
             });
         }
 
-        // Filtro por área responsable
         if ($request->filled('area_responsable')) {
             if ($request->area_responsable === 'sin_asignar') {
                 $query->whereNull('area_responsable_actual');
@@ -99,7 +94,6 @@ class IncidenciaController extends Controller
             });
         }
 
-        // 📄 PAGINACIÓN CON OPCIONES (15, 25, 50, 100)
         $perPage = in_array($request->input('per_page'), [15, 25, 50, 100])
             ? (int) $request->input('per_page')
             : 15;
@@ -109,16 +103,15 @@ class IncidenciaController extends Controller
                             ->paginate($perPage)
                             ->appends($request->query());
 
-        // 🎯 AGREGAR PERMISOS A CADA INCIDENCIA (ACTUALIZADO)
         $incidencias->getCollection()->transform(function($incidencia) use ($user, $userRole) {
             $incidencia->puede_editar = $this->puedeEditarIncidencia($incidencia, $user, $userRole);
             $incidencia->puede_eliminar = $this->puedeEliminarIncidencia($incidencia);
             $incidencia->puede_cambiar_estado = $this->puedeCambiarEstado($incidencia, $user, $userRole);
             $incidencia->puede_asignar = $this->puedeAsignarIncidencia($incidencia, $user, $userRole);
+            $incidencia->puede_transferir = $this->puedeTransferirIncidencia($incidencia, $user, $userRole);
             return $incidencia;
         });
 
-        // 📊 OBTENER DATOS PARA FILTROS (ACTUALIZADO)
         $estaciones = $this->getEstacionesParaFiltro($userRole, $user);
         $usuarios = $this->getUsuariosParaAsignacion($userRole, $user);
         $estadisticas = $this->calcularEstadisticas($userRole, $user);
@@ -132,7 +125,7 @@ class IncidenciaController extends Controller
     }
 
     /**
-     * Mostrar formulario para crear incidencia - ✅ ACTUALIZADO
+     * Mostrar formulario para crear incidencia
      */
     public function create()
     {
@@ -146,7 +139,6 @@ class IncidenciaController extends Controller
             $userRole = RolUsuario::VISOR;
         }
 
-        // Verificar permisos para crear
         if ($userRole === RolUsuario::VISOR) {
             abort(403, 'No tienes permisos para crear incidencias.');
         }
@@ -162,7 +154,6 @@ class IncidenciaController extends Controller
 
         $usuariosTecnicos = $this->getUsuariosParaAsignacion($userRole, $user);
 
-        // Categorías de incidencia
         $categorias = [
             'tecnica' => 'Técnica',
             'operativa' => 'Operativa',
@@ -176,7 +167,7 @@ class IncidenciaController extends Controller
     }
 
     /**
-     * Almacenar nueva incidencia - ✅ MANTENER TU VALIDACIÓN, ACTUALIZAR ROLES
+     * Almacenar nueva incidencia
      */
     public function store(Request $request)
     {
@@ -190,16 +181,13 @@ class IncidenciaController extends Controller
             $userRole = RolUsuario::VISOR;
         }
 
-        // Verificar permisos
         if ($userRole === RolUsuario::VISOR) {
             abort(403, 'No tienes permisos para crear incidencias.');
         }
 
-        // Obtener categoría para validación condicional
         $categoria = $request->input('categoria');
         $esInformativa = $categoria === 'informativa';
 
-        // ✅ VALIDACIÓN ACTUALIZADA - campos del formulario real
         $rules = [
             'estacion_id' => 'required|exists:estaciones,id',
             'descripcion_corta' => 'required|string|max:255',
@@ -211,7 +199,6 @@ class IncidenciaController extends Controller
             'reportado_por_user_id' => 'nullable|exists:users,id',
         ];
 
-        // La prioridad solo es obligatoria si NO es informativa
         if (!$esInformativa) {
             $rules['prioridad'] = 'required|in:critica,alta,media,baja';
         } else {
@@ -238,11 +225,6 @@ class IncidenciaController extends Controller
 
         $validated = $validator->validated();
 
-        // Mapear campos del formulario a campos del modelo
-        $validated['titulo'] = $validated['descripcion_corta'];
-        $validated['descripcion'] = $validated['descripcion_detallada'];
-
-        // ✅ VERIFICACIÓN DE SECTOR ACTUALIZADA
         if ($userRole === RolUsuario::SECTORISTA) {
             $estacion = Estacion::findOrFail($validated['estacion_id']);
             if ($estacion->sector !== $user->sector_asignado) {
@@ -253,30 +235,28 @@ class IncidenciaController extends Controller
         }
 
         try {
-            // ✅ CREAR INCIDENCIA CON CAMPOS CORRECTOS
             $incidencia = new Incidencia();
             $incidencia->estacion_id = $validated['estacion_id'];
-            $incidencia->titulo = $validated['titulo'];
-            $incidencia->descripcion = $validated['descripcion'];
+            // Mapeo de campos del formulario → campos de la BD
+            $incidencia->titulo = $validated['descripcion_corta'];
+            $incidencia->descripcion = $validated['descripcion_detallada'];
             $incidencia->prioridad = $validated['prioridad'] ?? 'baja';
             $incidencia->categoria = $validated['categoria'] ?? null;
             $incidencia->impacto_servicio = $validated['impacto_servicio'] ?? null;
-            $incidencia->observaciones = $validated['observaciones'] ?? null;
+            $incidencia->observaciones_tecnicas = $validated['observaciones'] ?? null;
 
             // Reportado por
             $incidencia->reportado_por_user_id = $validated['reportado_por_user_id'] ?? $user->id;
             $incidencia->reportado_por = $validated['reportado_por_user_id'] ?? $user->id;
             $incidencia->fecha_reporte = now();
 
-            // Asignar área responsable (ya no usuario)
+            // Área responsable
             $incidencia->area_responsable_actual = $validated['area_responsable'] ?? null;
 
-            // Si es categoría informativa, se crea con estado cerrada (finalizado)
             if ($esInformativa) {
-                $incidencia->estado = 'cerrada'; // Se muestra como "Finalizado"
+                $incidencia->estado = 'cerrada';
                 $incidencia->fecha_resolucion = now();
             } else {
-                // Si hay área asignada, poner en proceso
                 if ($incidencia->area_responsable_actual) {
                     $incidencia->estado = 'en_proceso';
                 } else {
@@ -286,7 +266,6 @@ class IncidenciaController extends Controller
 
             $incidencia->save();
 
-            // ✅ REGISTRAR CREACIÓN EN HISTORIAL
             \App\Models\IncidenciaHistorial::registrarCreacion(
                 $incidencia,
                 $user->id,
@@ -304,7 +283,7 @@ class IncidenciaController extends Controller
     }
 
     /**
-     * Mostrar incidencia específica - ✅ MANTENER TU IMPLEMENTACIÓN
+     * Mostrar incidencia específica
      */
     public function show(Incidencia $incidencia)
     {
@@ -322,15 +301,12 @@ class IncidenciaController extends Controller
             abort(403, 'No tienes permisos para ver esta incidencia.');
         }
 
-        // ✅ CARGAR RELACIONES INCLUYENDO HISTORIAL
+        // Cargar solo relaciones que efectivamente existen
         $incidencia->load([
             'estacion:id,codigo,razon_social,localidad,provincia,departamento,sector',
             'reportadoPorUsuario:id,name,email,telefono,rol',
             'asignadoAUsuario:id,name,email,telefono,rol',
-            'responsableActual:id,name,email,telefono,rol',
-            'historial.usuarioAccion:id,name',
-            'historial.responsableAnterior:id,name',
-            'historial.responsableNuevo:id,name'
+            'historial.usuarioAccion:id,name'
         ]);
 
         $permisos = [
@@ -346,7 +322,6 @@ class IncidenciaController extends Controller
             $usuariosAsignacion = $this->getUsuariosParaAsignacion($userRole, $user);
         }
 
-        // Usuarios disponibles para transferencia
         $usuariosTransferencia = [];
         if ($permisos['puede_transferir']) {
             $usuariosTransferencia = User::where('activo', true)
@@ -363,7 +338,7 @@ class IncidenciaController extends Controller
                 ->get();
         }
 
-        // Calcular estadísticas de tiempo
+        // Estadísticas de tiempo
         $fechaReporte = $incidencia->fecha_reporte ?? $incidencia->created_at;
         $ahora = now();
         $tiempoTranscurrido = $fechaReporte->diff($ahora);
@@ -379,7 +354,6 @@ class IncidenciaController extends Controller
                               ($tiempoTranscurrido->h + ($tiempoTranscurrido->days * 24)) > $incidencia->tiempo_respuesta_estimado
         ];
 
-        // ✅ OBTENER HISTORIAL REAL DESDE LA BASE DE DATOS
         // Si no hay registros en historial, crear el registro inicial
         if ($incidencia->historial->isEmpty()) {
             \App\Models\IncidenciaHistorial::registrarCreacion(
@@ -387,7 +361,6 @@ class IncidenciaController extends Controller
                 $incidencia->reportado_por_user_id ?? auth()->id(),
                 'Registro inicial generado automáticamente'
             );
-            // Recargar historial
             $incidencia->load('historial.usuarioAccion');
         }
 
@@ -395,7 +368,7 @@ class IncidenciaController extends Controller
     }
 
     /**
-     * ✅ MÉTODO EDIT COMPLETO CON NUEVOS ROLES
+     * Mostrar formulario de edición
      */
     public function edit(Incidencia $incidencia)
     {
@@ -413,7 +386,6 @@ class IncidenciaController extends Controller
             abort(403, 'No tienes permisos para editar esta incidencia.');
         }
 
-        // Obtener estaciones según el rol
         $estaciones = $this->getEstacionesParaFormulario($userRole, $user);
 
         $prioridades = [
@@ -431,13 +403,9 @@ class IncidenciaController extends Controller
             'cancelada' => 'Cancelada'
         ];
 
-        // ✅ USUARIOS TÉCNICOS ACTUALIZADOS
         $usuariosTecnicos = $this->getUsuariosParaAsignacion($userRole, $user);
-
-        // ✅ VERIFICAR QUÉ CAMPOS PUEDE EDITAR SEGÚN EL ROL
         $camposEditables = $this->getCamposEditables($userRole, $incidencia);
 
-        // Categorías de incidencia
         $categorias = [
             'tecnica' => 'Técnica',
             'operativa' => 'Operativa',
@@ -459,7 +427,7 @@ class IncidenciaController extends Controller
     }
 
     /**
-     * ✅ MÉTODO UPDATE COMPLETO CON NUEVOS ROLES Y VALIDACIONES
+     * Actualizar incidencia
      */
     public function update(Request $request, Incidencia $incidencia)
     {
@@ -477,15 +445,16 @@ class IncidenciaController extends Controller
             abort(403, 'No tienes permisos para editar esta incidencia.');
         }
 
-        // ✅ VALIDACIÓN DIFERENCIADA POR ROL
+        // Validación: el formulario envía descripcion_corta y descripcion_detallada
         $rules = [
-            'titulo' => 'required|string|max:255',
-            'descripcion' => 'required|string|min:10',
+            'descripcion_corta' => 'required|string|max:255',
+            'descripcion_detallada' => 'required|string|min:10|max:2000',
             'estacion_id' => 'required|exists:estaciones,id',
             'prioridad' => 'required|in:critica,alta,media,baja',
+            'categoria' => 'nullable|in:tecnica,operativa,administrativa,infraestructura,equipamiento,informativa',
+            'impacto_servicio' => 'nullable|in:bajo,medio,alto',
         ];
 
-        // Campos adicionales según el rol
         $camposEditables = $this->getCamposEditables($userRole, $incidencia);
         
         if ($camposEditables['puede_cambiar_estado']) {
@@ -512,12 +481,13 @@ class IncidenciaController extends Controller
             $rules['costo_dolares'] = 'nullable|numeric|min:0';
         }
         
-        $rules['observaciones_tecnicas'] = 'nullable|string|max:1000';
+        $rules['observaciones'] = 'nullable|string|max:1000';
+        $rules['acciones_tomadas'] = 'nullable|string|max:2000';
 
         $validator = Validator::make($request->all(), $rules, [
-            'titulo.required' => 'El título es obligatorio',
-            'descripcion.required' => 'La descripción es obligatoria',
-            'descripcion.min' => 'La descripción debe tener al menos 10 caracteres',
+            'descripcion_corta.required' => 'La descripción corta es obligatoria',
+            'descripcion_detallada.required' => 'La descripción detallada es obligatoria',
+            'descripcion_detallada.min' => 'La descripción detallada debe tener al menos 10 caracteres',
             'estacion_id.required' => 'Debe seleccionar una estación',
             'estacion_id.exists' => 'La estación seleccionada no existe',
             'prioridad.required' => 'Debe seleccionar una prioridad',
@@ -530,7 +500,6 @@ class IncidenciaController extends Controller
 
         $validated = $validator->validated();
 
-        // ✅ VERIFICACIONES ESPECÍFICAS POR ROL
         if ($userRole === RolUsuario::SECTORISTA) {
             $estacion = Estacion::findOrFail($validated['estacion_id']);
             if ($estacion->sector !== $user->sector_asignado) {
@@ -540,45 +509,69 @@ class IncidenciaController extends Controller
             }
         }
 
-        // ✅ LÓGICA ESPECÍFICA POR TIPO DE USUARIO
-        if ($userRole === RolUsuario::ENCARGADO_LOGISTICO) {
-            // Solo puede editar aspectos de costos y equipos
-            $validated = array_intersect_key($validated, array_flip([
-                'observaciones_tecnicas', 'costo_soles', 'costo_dolares', 'descripcion'
-            ]));
-        }
-
         try {
-            // Actualizar solo los campos permitidos según el rol
-            $incidencia->fill($validated);
+            // Mapeo de campos del formulario → campos de la BD
+            $incidencia->titulo = $validated['descripcion_corta'];
+            $incidencia->descripcion = $validated['descripcion_detallada'];
+            $incidencia->estacion_id = $validated['estacion_id'];
+            $incidencia->prioridad = $validated['prioridad'];
+            $incidencia->categoria = $validated['categoria'] ?? $incidencia->categoria;
+            $incidencia->impacto_servicio = $validated['impacto_servicio'] ?? $incidencia->impacto_servicio;
+            $incidencia->observaciones_tecnicas = $validated['observaciones'] ?? $incidencia->observaciones_tecnicas;
 
-            // ✅ LÓGICA DE ASIGNACIÓN
+            // Estado
+            if (isset($validated['estado']) && $camposEditables['puede_cambiar_estado']) {
+                $incidencia->estado = $validated['estado'];
+            }
+
+            // Asignación
             if (isset($validated['asignado_a_user_id']) && $camposEditables['puede_asignar']) {
-                $incidencia->asignado_a = $validated['asignado_a_user_id'];
+                $incidencia->asignado_a_user_id = $validated['asignado_a_user_id'];
+                $incidencia->asignado_a = $validated['asignado_a_user_id']; // Sincronizar legacy
                 
-                // Auto-cambiar estado si se asigna
                 if ($validated['asignado_a_user_id'] && $incidencia->estado === 'abierta') {
                     $incidencia->estado = 'en_proceso';
                 }
             }
 
-            // ✅ LÓGICA DE RESOLUCIÓN
-            if (isset($validated['estado']) && $validated['estado'] === 'resuelta' && !$incidencia->fecha_resolucion) {
+            // Campos opcionales según permisos
+            if ($camposEditables['puede_gestionar_tiempo']) {
+                if (isset($validated['tiempo_respuesta_estimado'])) {
+                    $incidencia->tiempo_respuesta_estimado = $validated['tiempo_respuesta_estimado'];
+                }
+                if (isset($validated['fecha_visita_programada'])) {
+                    $incidencia->fecha_visita_programada = $validated['fecha_visita_programada'];
+                }
+                $incidencia->requiere_visita_tecnica = $validated['requiere_visita_tecnica'] ?? false;
+            }
+
+            if ($camposEditables['puede_documentar_solucion']) {
+                if (isset($validated['solucion'])) {
+                    $incidencia->solucion = $validated['solucion'];
+                }
+            }
+
+            if ($camposEditables['puede_gestionar_costos']) {
+                if (isset($validated['costo_soles'])) {
+                    $incidencia->costo_soles = $validated['costo_soles'];
+                }
+                if (isset($validated['costo_dolares'])) {
+                    $incidencia->costo_dolares = $validated['costo_dolares'];
+                }
+            }
+
+            // Lógica de resolución
+            if ($incidencia->estado === 'resuelta' && !$incidencia->fecha_resolucion) {
                 $incidencia->fecha_resolucion = now();
             }
 
-            // ✅ LÓGICA DE CIERRE
-            if (isset($validated['estado']) && $validated['estado'] === 'cerrada') {
-                if (!$incidencia->fecha_resolucion) {
-                    $incidencia->fecha_resolucion = now();
-                }
-                $incidencia->fecha_cierre = now();
-                $incidencia->cerrado_por = $user->id;
+            // Lógica de cierre
+            if ($incidencia->estado === 'cerrada' && !$incidencia->fecha_resolucion) {
+                $incidencia->fecha_resolucion = now();
             }
 
             $incidencia->save();
 
-            // ✅ MENSAJE PERSONALIZADO POR ROL
             $mensaje = $this->getMensajeActualizacion($userRole);
 
             return redirect()->route('incidencias.show', $incidencia)
@@ -592,7 +585,7 @@ class IncidenciaController extends Controller
     }
 
     /**
-     * ✅ MÉTODO DESTROY COMPLETO CON AUDITORÍA
+     * Eliminar incidencia (soft delete)
      */
     public function destroy(Request $request, Incidencia $incidencia)
     {
@@ -606,19 +599,15 @@ class IncidenciaController extends Controller
             $userRole = RolUsuario::VISOR;
         }
 
-
-        // Solo administrador puede eliminar
         if ($userRole !== RolUsuario::ADMINISTRADOR) {
             return back()->with('error', 'No tienes permisos para eliminar incidencias.');
         }
 
-        // Verificar que no esté en proceso crítico
         if ($incidencia->estado_value === 'en_proceso' && $incidencia->prioridad_value === 'critica') {
             return back()->with('error', 'No se puede eliminar una incidencia crítica en proceso.');
         }
 
         try {
-            // ✅ AUDITORÍA ANTES DE ELIMINAR (crear tabla si no existe)
             $this->registrarEliminacionIncidencia($incidencia, $user, $request);
 
             $codigoEstacion = $incidencia->estacion->codigo;
@@ -635,7 +624,63 @@ class IncidenciaController extends Controller
     }
 
     /**
-     * Transferir responsabilidad de incidencia a otra área/usuario
+     * Cambiar estado de incidencia (AJAX desde index)
+     */
+    public function cambiarEstado(Request $request, Incidencia $incidencia)
+    {
+        $user = Auth::user();
+
+        try {
+            $userRole = $user->rol instanceof RolUsuario
+                ? $user->rol
+                : RolUsuario::from((string) $user->rol);
+        } catch (\ValueError $e) {
+            $userRole = RolUsuario::VISOR;
+        }
+
+        if (!$this->puedeCambiarEstado($incidencia, $user, $userRole)) {
+            return response()->json(['success' => false, 'message' => 'No tienes permisos para cambiar el estado.'], 403);
+        }
+
+        $validated = $request->validate([
+            'nuevo_estado' => 'required|in:abierta,en_proceso,resuelta,cerrada,cancelada',
+            'observaciones' => 'nullable|string|max:500',
+        ]);
+
+        try {
+            $estadoAnterior = $incidencia->estado_value;
+            $incidencia->estado = $validated['nuevo_estado'];
+
+            if ($validated['nuevo_estado'] === 'resuelta' && !$incidencia->fecha_resolucion) {
+                $incidencia->fecha_resolucion = now();
+            }
+            if ($validated['nuevo_estado'] === 'cerrada' && !$incidencia->fecha_resolucion) {
+                $incidencia->fecha_resolucion = now();
+            }
+
+            $incidencia->save();
+
+            \App\Models\IncidenciaHistorial::registrarCambioEstado(
+                $incidencia,
+                $estadoAnterior,
+                $validated['nuevo_estado'],
+                $user->id,
+                $validated['observaciones'] ?? null
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Estado actualizado exitosamente.',
+                'nuevo_estado' => $validated['nuevo_estado'],
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Error al cambiar estado de incidencia {$incidencia->id}: " . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Error al cambiar el estado.'], 500);
+        }
+    }
+
+    /**
+     * Transferir responsabilidad de incidencia a otra área
      */
     public function transferir(Request $request, Incidencia $incidencia)
     {
@@ -654,64 +699,83 @@ class IncidenciaController extends Controller
             return back()->with('error', 'No tienes permisos para transferir esta incidencia.');
         }
 
-        // Verificar que la incidencia sea transferible
+        // Verificar que la incidencia sea transferible (estado abierta o en_proceso)
         if (!$incidencia->esTransferible()) {
             return back()->with('error', 'Esta incidencia no puede ser transferida en su estado actual. Solo se pueden transferir incidencias abiertas o en proceso.');
         }
 
-        // Validar request (solo área requerida, observaciones opcionales)
+        // Validar datos del formulario
         $validated = $request->validate([
-            'area_nueva' => 'required|string|max:100',
-            'observaciones' => 'nullable|string|max:500',
+            'area_nueva' => 'required|string|in:ingenieria,laboratorio,logistica,operaciones,administracion,contabilidad,iglesia_local',
+            'observaciones' => 'required|string|min:10|max:500',
+            'responsable_nuevo_id' => 'nullable|exists:users,id',
         ], [
             'area_nueva.required' => 'Debe especificar el área destino',
-            'area_nueva.max' => 'El área no puede exceder 100 caracteres',
+            'area_nueva.in' => 'El área seleccionada no es válida',
+            'observaciones.required' => 'Las observaciones son obligatorias',
+            'observaciones.min' => 'Las observaciones deben tener al menos 10 caracteres',
             'observaciones.max' => 'Las observaciones no pueden exceder 500 caracteres',
         ]);
 
         try {
-            // Ejecutar transferencia (sin responsable específico, solo área)
+            // Ejecutar transferencia
             $resultado = $incidencia->transferirResponsabilidad(
                 $validated['area_nueva'],
-                (string) ($validated['observaciones'] ?? ''),
+                $validated['observaciones'],
                 $user->id
             );
 
             if ($resultado) {
-                $mensaje = "Incidencia transferida exitosamente al área: {$validated['area_nueva']}";
+                // Si se envió un responsable_nuevo_id, actualizar la asignación
+                if (!empty($validated['responsable_nuevo_id'])) {
+                    $incidencia->asignado_a_user_id = $validated['responsable_nuevo_id'];
+                    $incidencia->asignado_a = $validated['responsable_nuevo_id'];
+                    $incidencia->save();
+                }
+
+                $areaLabels = [
+                    'ingenieria' => 'Ingeniería',
+                    'laboratorio' => 'Laboratorio',
+                    'logistica' => 'Logística',
+                    'operaciones' => 'Operaciones',
+                    'administracion' => 'Administración',
+                    'contabilidad' => 'Contabilidad',
+                    'iglesia_local' => 'Iglesia Local',
+                ];
+                $areaLabel = $areaLabels[$validated['area_nueva']] ?? ucfirst($validated['area_nueva']);
+                $mensaje = "Incidencia transferida exitosamente al área: " . $areaLabel;
 
                 return redirect()
                     ->route('incidencias.show', $incidencia)
                     ->with('success', $mensaje);
             } else {
                 return back()
-                    ->withErrors(['error' => 'Error al transferir la incidencia'])
+                    ->with('error', 'Error al transferir la incidencia. Revise los datos e intente nuevamente.')
                     ->withInput();
             }
 
         } catch (\Exception $e) {
+            Log::error("Error al transferir incidencia {$incidencia->id}: " . $e->getMessage());
             return back()
-                ->withErrors(['error' => 'Error al transferir la incidencia: ' . $e->getMessage()])
+                ->with('error', 'Error al transferir la incidencia: ' . $e->getMessage())
                 ->withInput();
         }
     }
 
     // =====================================================
-    // MÉTODOS PRIVADOS NUEVOS Y ACTUALIZADOS
+    // MÉTODOS PRIVADOS DE PERMISOS
     // =====================================================
 
     /**
-     * ✅ NUEVO: Aplicar filtros según nuevos roles
+     * Aplicar filtros según roles
      */
     private function aplicarFiltrosPorRol($query, $userRole, $user)
     {
         switch ($userRole) {
             case RolUsuario::ADMINISTRADOR:
-                // Ve todas las incidencias
                 break;
 
             case RolUsuario::SECTORISTA:
-                // Solo incidencias de su sector
                 if ($user->sector_asignado) {
                     $query->whereHas('estacion', function($q) use ($user) {
                         $q->where('sector', $user->sector_asignado);
@@ -722,29 +786,22 @@ class IncidenciaController extends Controller
             case RolUsuario::ENCARGADO_INGENIERIA:
             case RolUsuario::ENCARGADO_LABORATORIO:
             case RolUsuario::COORDINADOR_OPERACIONES:
-                // Ve todas, puede gestionar según especialidad
-                break;
-
             case RolUsuario::ENCARGADO_LOGISTICO:
             case RolUsuario::ASISTENTE_CONTABLE:
             case RolUsuario::GESTOR_RADIODIFUSION:
             case RolUsuario::VISOR:
-                // Ve todas las incidencias (solo lectura)
-                break;
-
             default:
-                // Fallback: acceso completo si rol no reconocido
                 break;
         }
     }
 
     /**
-     * ✅ NUEVO: Determinar campos editables por rol
+     * Determinar campos editables por rol
      */
     private function getCamposEditables($userRole, $incidencia): array
     {
         $base = [
-            'puede_cambiar_basicos' => true, // título, descripción
+            'puede_cambiar_basicos' => true,
             'puede_cambiar_prioridad' => false,
             'puede_cambiar_estado' => false,
             'puede_asignar' => false,
@@ -788,13 +845,123 @@ class IncidenciaController extends Controller
                 ]);
 
             default:
-                return $base; // Solo cambios básicos
+                return $base;
         }
     }
 
     /**
-     * ✅ NUEVO: Mensaje de actualización personalizado
+     * Verificar si el usuario puede ver la incidencia
      */
+    private function puedeVerIncidencia($incidencia, $user, $userRole): bool
+    {
+        if ($userRole === RolUsuario::ADMINISTRADOR) return true;
+        
+        if ($userRole === RolUsuario::SECTORISTA && $user->sector_asignado) {
+            return $incidencia->estacion->sector === $user->sector_asignado;
+        }
+        
+        // Todos los demás roles ven todas (con restricciones de edición)
+        return true;
+    }
+
+    /**
+     * Verificar si el usuario puede editar la incidencia
+     */
+    private function puedeEditarIncidencia($incidencia, $user, $userRole): bool
+    {
+        if ($userRole === RolUsuario::VISOR) return false;
+        if (in_array($incidencia->estado_value, ['cerrada', 'cancelada'])) return false;
+        if ($userRole === RolUsuario::ADMINISTRADOR) return true;
+        
+        if ($userRole === RolUsuario::SECTORISTA && $user->sector_asignado) {
+            return $incidencia->estacion->sector === $user->sector_asignado;
+        }
+        
+        if (in_array($userRole, [
+            RolUsuario::ENCARGADO_INGENIERIA,
+            RolUsuario::ENCARGADO_LABORATORIO,
+            RolUsuario::COORDINADOR_OPERACIONES
+        ])) {
+            return true;
+        }
+
+        if ($userRole === RolUsuario::ENCARGADO_LOGISTICO) {
+            return str_contains(strtolower($incidencia->titulo), 'equipo') || 
+                   str_contains(strtolower($incidencia->titulo), 'logistica');
+        }
+        
+        if (in_array($userRole, [
+            RolUsuario::ASISTENTE_CONTABLE,
+            RolUsuario::GESTOR_RADIODIFUSION
+        ])) {
+            return false;
+        }
+
+        return false;
+    }
+
+    /**
+     * Verificar si el usuario puede eliminar la incidencia
+     */
+    private function puedeEliminarIncidencia($incidencia): bool
+    {
+        $user = Auth::user();
+        return $user->rol === 'administrador';
+    }
+
+    /**
+     * Verificar si el usuario puede asignar la incidencia
+     */
+    private function puedeAsignarIncidencia($incidencia, $user, $userRole): bool
+    {
+        if (in_array($incidencia->estado_value, ['cerrada', 'cancelada'])) {
+            return false;
+        }
+
+        return in_array($userRole, [
+            RolUsuario::ADMINISTRADOR,
+            RolUsuario::SECTORISTA,
+            RolUsuario::COORDINADOR_OPERACIONES
+        ]);
+    }
+
+    /**
+     * Verificar si el usuario puede cambiar el estado
+     */
+    private function puedeCambiarEstado($incidencia, $user, $userRole): bool
+    {
+        return $this->puedeEditarIncidencia($incidencia, $user, $userRole) &&
+               !in_array($incidencia->estado_value, ['cerrada']);
+    }
+
+    /**
+     * ✅ MÉTODO QUE FALTABA: Verificar si el usuario puede transferir la incidencia
+     * 
+     * Condiciones para poder transferir:
+     *  - La incidencia debe estar en estado abierta o en_proceso
+     *  - El usuario debe tener un rol con permisos de transferencia
+     */
+    private function puedeTransferirIncidencia($incidencia, $user, $userRole): bool
+    {
+        // Solo se puede transferir si la incidencia está activa
+        if (!$incidencia->esTransferible()) {
+            return false;
+        }
+
+        // Roles que pueden transferir
+        return in_array($userRole, [
+            RolUsuario::ADMINISTRADOR,
+            RolUsuario::SECTORISTA,
+            RolUsuario::COORDINADOR_OPERACIONES,
+            RolUsuario::ENCARGADO_INGENIERIA,
+            RolUsuario::ENCARGADO_LABORATORIO
+        ]);
+    }
+
+    // =====================================================
+    // MÉTODOS AUXILIARES
+    // =====================================================
+
     private function getMensajeActualizacion($userRole): string
     {
         return match($userRole) {
@@ -808,13 +975,9 @@ class IncidenciaController extends Controller
         };
     }
 
-    /**
-     * ✅ NUEVO: Registrar eliminación para auditoría
-     */
     private function registrarEliminacionIncidencia($incidencia, $user, $request)
     {
         try {
-            // Crear tabla de auditoría si no existe
             DB::statement("CREATE TABLE IF NOT EXISTS auditoria_incidencias (
                 id BIGINT PRIMARY KEY AUTO_INCREMENT,
                 incidencia_id BIGINT NOT NULL,
@@ -846,120 +1009,6 @@ class IncidenciaController extends Controller
         }
     }
 
-    /**
-     * ✅ PERMISOS DE VISUALIZACIÓN ACTUALIZADOS
-     */
-    private function puedeVerIncidencia($incidencia, $user, $userRole): bool
-    {
-        // Administrador ve todas
-        if ($userRole === RolUsuario::ADMINISTRADOR) return true;
-        
-        // Sectorista: solo las de su sector
-        if ($userRole === RolUsuario::SECTORISTA && $user->sector_asignado) {
-            return $incidencia->estacion->sector === $user->sector_asignado;
-        }
-        
-        // Roles técnicos ven todas
-        if (in_array($userRole, [
-            RolUsuario::ENCARGADO_INGENIERIA,
-            RolUsuario::ENCARGADO_LABORATORIO,
-            RolUsuario::COORDINADOR_OPERACIONES,
-            RolUsuario::ENCARGADO_LOGISTICO
-        ])) {
-            return true;
-        }
-        
-        // Roles administrativos/financieros ven todas (solo lectura)
-        if (in_array($userRole, [
-            RolUsuario::ASISTENTE_CONTABLE,
-            RolUsuario::GESTOR_RADIODIFUSION,
-            RolUsuario::VISOR
-        ])) {
-            return true;
-        }
-
-        // ⚠️ LEGACY: mantener lógica antigua para roles antiguos
-        if (isset($user->estaciones_asignadas) && $user->estaciones_asignadas) {
-            $estacionesAsignadas = json_decode($user->estaciones_asignadas, true) ?? [];
-            return in_array($incidencia->estacion_id, $estacionesAsignadas);
-        }
-        
-        return true;
-    }
-
-    /**
-     * ✅ PERMISOS DE EDICIÓN ACTUALIZADOS
-     */
-    private function puedeEditarIncidencia($incidencia, $user, $userRole): bool
-    {
-        // Visor no puede editar
-        if ($userRole === RolUsuario::VISOR) return false;
-        
-        // No editar si está cerrada
-        if (in_array($incidencia->estado_value, ['cerrada', 'cancelada'])) return false;
-        
-        // Administrador puede editar todas
-        if ($userRole === RolUsuario::ADMINISTRADOR) return true;
-        
-        // Sectorista: solo su sector
-        if ($userRole === RolUsuario::SECTORISTA && $user->sector_asignado) {
-            return $incidencia->estacion->sector === $user->sector_asignado;
-        }
-        
-        // Roles técnicos pueden editar
-        if (in_array($userRole, [
-            RolUsuario::ENCARGADO_INGENIERIA,
-            RolUsuario::ENCARGADO_LABORATORIO,
-            RolUsuario::COORDINADOR_OPERACIONES
-        ])) {
-            return true;
-        }
-
-        // Encargado logístico: solo incidencias relacionadas
-        if ($userRole === RolUsuario::ENCARGADO_LOGISTICO) {
-            return str_contains(strtolower($incidencia->titulo), 'equipo') || 
-                   str_contains(strtolower($incidencia->titulo), 'logistica');
-        }
-        
-        // Roles de solo lectura: no pueden editar
-        if (in_array($userRole, [
-            RolUsuario::ASISTENTE_CONTABLE,
-            RolUsuario::GESTOR_RADIODIFUSION
-        ])) {
-            return false;
-        }
-
-        return false;
-    }
-
-    /**
-     * ✅ PERMISOS DE ELIMINACIÓN ACTUALIZADOS
-     */
-    private function puedeEliminarIncidencia($incidencia): bool
-    {
-        $user = Auth::user();
-        return $user->rol === 'administrador'; // Solo administrador
-    }
-
-    /**
-     * ✅ PERMISOS DE ASIGNACIÓN ACTUALIZADOS
-     */
-    private function puedeAsignarIncidencia($incidencia, $user, $userRole): bool
-    {
-        if (in_array($incidencia->estado_value, ['cerrada', 'cancelada'])) {
-            return false;
-        }
-
-        return in_array($userRole, [
-            RolUsuario::ADMINISTRADOR,
-            RolUsuario::SECTORISTA,
-            RolUsuario::COORDINADOR_OPERACIONES
-        ]);
-    }
-
-    /**
-     * ✅ OBTENER ESTACIONES SEGÚN ROL
-     */
     private function getEstacionesParaFiltro($userRole, $user)
     {
         $query = Estacion::select('id', 'codigo', 'razon_social', 'sector')
@@ -972,9 +1021,6 @@ class IncidenciaController extends Controller
         return $query->get();
     }
 
-    /**
-     * ✅ OBTENER ESTACIONES PARA FORMULARIO
-     */
     private function getEstacionesParaFormulario($userRole, $user)
     {
         $query = Estacion::select('id', 'codigo', 'razon_social', 'sector')
@@ -988,12 +1034,8 @@ class IncidenciaController extends Controller
         return $query->get();
     }
 
-    /**
-     * ✅ OBTENER USUARIOS PARA ASIGNACIÓN SEGÚN NUEVOS ROLES
-     */
     private function getUsuariosParaAsignacion($userRole, $user)
     {
-        // Solo ciertos roles pueden asignar
         if (!in_array($userRole, [
             RolUsuario::ADMINISTRADOR,
             RolUsuario::SECTORISTA,
@@ -1016,14 +1058,10 @@ class IncidenciaController extends Controller
                   ->get();
     }
 
-    /**
-     * ✅ CALCULAR ESTADÍSTICAS ACTUALIZADO
-     */
     private function calcularEstadisticas($userRole = null, $user = null): array
     {
         $query = Incidencia::query();
 
-        // Aplicar mismo filtro que en index
         if ($userRole) {
             $this->aplicarFiltrosPorRol($query, $userRole, $user);
         }
@@ -1050,22 +1088,10 @@ class IncidenciaController extends Controller
         ];
     }
 
-    /**
-     * ✅ MÉTODO AUXILIAR PARA CAMBIO DE ESTADO
-     */
-    private function puedeCambiarEstado($incidencia, $user, $userRole): bool
-    {
-        return $this->puedeEditarIncidencia($incidencia, $user, $userRole) &&
-               !in_array($incidencia->estado_value, ['cerrada']);
-    }
-
     // =====================================================
-    // MÉTODOS DE EXPORTACIÓN
+    // EXPORTACIONES
     // =====================================================
 
-    /**
-     * Exportar incidencias a PDF con filtros y selección de columnas
-     */
     public function exportarPdf(Request $request)
     {
         $user = Auth::user();
@@ -1078,7 +1104,6 @@ class IncidenciaController extends Controller
             $userRole = RolUsuario::VISOR;
         }
 
-        // Columnas disponibles
         $columnasDisponibles = [
             'codigo' => 'Código',
             'estacion' => 'Estación',
@@ -1094,36 +1119,28 @@ class IncidenciaController extends Controller
             'dias_transcurridos' => 'Días',
         ];
 
-        // Columnas seleccionadas (por defecto, las principales)
         $columnasDefecto = ['codigo', 'estacion', 'titulo', 'prioridad', 'estado', 'area_responsable', 'fecha_reporte', 'dias_transcurridos'];
         $columnasSeleccionadas = $request->input('columnas', $columnasDefecto);
 
-        // Si es una cadena separada por comas, convertir a array
         if (is_string($columnasSeleccionadas)) {
             $columnasSeleccionadas = explode(',', $columnasSeleccionadas);
         }
 
-        // Filtrar solo columnas válidas
         $columnasSeleccionadas = array_intersect($columnasSeleccionadas, array_keys($columnasDisponibles));
 
-        // Query base con relaciones
         $query = Incidencia::with([
             'estacion:id,codigo,localidad,razon_social,sector',
             'reportadoPorUsuario:id,name',
-            'asignadoAUsuario:id,name',
-            'responsableActual:id,name'
+            'asignadoAUsuario:id,name'
         ]);
 
-        // Aplicar filtros por rol
         $this->aplicarFiltrosPorRol($query, $userRole, $user);
 
-        // Aplicar los mismos filtros que en index
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
                 $q->where('titulo', 'LIKE', "%{$search}%")
-                  ->orWhere('descripcion', 'LIKE', "%{$search}%")
-                  ->orWhere('codigo_incidencia', 'LIKE', "%{$search}%");
+                  ->orWhere('descripcion', 'LIKE', "%{$search}%");
             });
         }
 
@@ -1147,23 +1164,13 @@ class IncidenciaController extends Controller
             $query->where('area_responsable_actual', $request->area);
         }
 
-        if ($request->filled('reportado_por_usuario')) {
-            $query->where('reportado_por_user_id', $request->reportado_por_usuario);
-        }
-
-        if ($request->filled('asignado_a_usuario')) {
-            $query->where('asignado_a_user_id', $request->asignado_a_usuario);
-        }
-
         $incidencias = $query->orderBy('fecha_reporte', 'desc')->get();
 
-        // Preparar columnas para la vista
         $columnas = [];
         foreach ($columnasSeleccionadas as $key) {
             $columnas[$key] = $columnasDisponibles[$key];
         }
 
-        // Estadísticas
         $estadisticas = [
             'total' => $incidencias->count(),
             'abiertas' => $incidencias->where('estado_value', 'abierta')->count(),
@@ -1172,7 +1179,6 @@ class IncidenciaController extends Controller
             'criticas' => $incidencias->where('prioridad_value', 'critica')->count(),
         ];
 
-        // Título del reporte basado en filtros
         $titulo = 'Listado de Incidencias';
         $filtrosAplicados = [];
 
@@ -1203,9 +1209,6 @@ class IncidenciaController extends Controller
         return $pdf->download('incidencias_' . date('Y-m-d') . '.pdf');
     }
 
-    /**
-     * Exportar incidencias a Excel con filtros y selección de columnas
-     */
     public function exportarExcel(Request $request)
     {
         $user = Auth::user();
@@ -1218,7 +1221,6 @@ class IncidenciaController extends Controller
             $userRole = RolUsuario::VISOR;
         }
 
-        // Obtener filtros desde request
         $filtros = [
             'search' => $request->input('search'),
             'estacion' => $request->input('estacion'),
@@ -1230,11 +1232,9 @@ class IncidenciaController extends Controller
             'asignado_a_usuario' => $request->input('asignado_a_usuario'),
         ];
 
-        // Columnas seleccionadas
         $columnasDefecto = ['codigo', 'estacion', 'localidad', 'titulo', 'prioridad', 'estado', 'tipo', 'area_responsable', 'reportado_por', 'asignado_a', 'fecha_reporte', 'dias_transcurridos'];
         $columnas = $request->input('columnas', $columnasDefecto);
 
-        // Si es una cadena separada por comas, convertir a array
         if (is_string($columnas)) {
             $columnas = explode(',', $columnas);
         }
@@ -1247,9 +1247,6 @@ class IncidenciaController extends Controller
         );
     }
 
-    /**
-     * Retornar columnas disponibles para el modal de exportación
-     */
     public function columnasExportacion()
     {
         return response()->json([
@@ -1265,7 +1262,6 @@ class IncidenciaController extends Controller
                 'area_responsable' => 'Área Responsable',
                 'reportado_por' => 'Reportado Por',
                 'asignado_a' => 'Asignado A',
-                'responsable_actual' => 'Responsable Actual',
                 'fecha_reporte' => 'Fecha Reporte',
                 'fecha_resolucion' => 'Fecha Resolución',
                 'dias_transcurridos' => 'Días Transcurridos',

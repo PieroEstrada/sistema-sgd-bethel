@@ -56,10 +56,9 @@ class Estacion extends Model
         'diagnostico_fa',
         'fecha_salida_aire',
         // Campos de licencia
-        'licencia_vencimiento',
+        'licencia_vence',
         'licencia_rvm',
-        'licencia_riesgo',
-        'licencia_meses_restantes',
+        'riesgo_licencia',
         'licencia_situacion',
     ];
 
@@ -85,9 +84,8 @@ class Estacion extends Model
         'presupuesto_dolares' => 'decimal:2',
         'fecha_salida_aire' => 'date',
         // Campos de licencia
-        'licencia_vencimiento' => 'date',
-        'licencia_riesgo' => RiesgoLicencia::class,
-        'licencia_meses_restantes' => 'integer',
+        'licencia_vence' => 'date',
+        'riesgo_licencia' => RiesgoLicencia::class,
     ];
 
     // Relaciones
@@ -159,27 +157,28 @@ class Estacion extends Model
 
     public function scopePorRiesgoLicencia($query, RiesgoLicencia $riesgo)
     {
-        return $query->where('licencia_riesgo', $riesgo);
+        return $query->where('riesgo_licencia', $riesgo);
     }
 
     public function scopeRiesgoAlto($query)
     {
-        return $query->where('licencia_riesgo', RiesgoLicencia::ALTO);
+        return $query->where('riesgo_licencia', RiesgoLicencia::ALTO);
     }
 
     public function scopeRiesgoMedio($query)
     {
-        return $query->where('licencia_riesgo', RiesgoLicencia::MEDIO);
+        return $query->where('riesgo_licencia', RiesgoLicencia::MEDIO);
     }
 
     public function scopeRiesgoSeguro($query)
     {
-        return $query->where('licencia_riesgo', RiesgoLicencia::SEGURO);
+        return $query->where('riesgo_licencia', RiesgoLicencia::SEGURO);
     }
 
     public function scopeConLicenciaVencida($query)
     {
-        return $query->where('licencia_meses_restantes', '<', 0);
+        return $query->whereNotNull('licencia_vence')
+                     ->where('licencia_vence', '<', DB::raw('CURDATE()'));
     }
 
     public function scopePorDepartamento($query, string $departamento)
@@ -232,6 +231,26 @@ class Estacion extends Model
             return "Canal {$this->canal_tv}";
         }
         return "{$this->frecuencia} {$this->banda->value}";
+    }
+
+    /**
+     * Calcula dinámicamente los meses restantes hasta el vencimiento de la licencia.
+     * Positivo = meses restantes, Negativo = meses vencida, null = sin fecha.
+     */
+    public function getLicenciaMesesRestantesAttribute(): ?int
+    {
+        if (!$this->licencia_vence) {
+            return null;
+        }
+
+        $hoy = now()->startOfDay();
+        $vence = $this->licencia_vence->copy()->startOfDay();
+
+        if ($vence->lt($hoy)) {
+            return -((int) $vence->diffInMonths($hoy));
+        }
+
+        return (int) $hoy->diffInMonths($vence);
     }
 
     public function getDiasEnEstadoActualAttribute(): int

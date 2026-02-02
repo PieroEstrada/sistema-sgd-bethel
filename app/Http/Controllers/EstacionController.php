@@ -72,15 +72,16 @@ class EstacionController extends Controller
         if ($request->filled('riesgo')) {
             $riesgo = strtoupper($request->riesgo);
             if (in_array($riesgo, ['ALTO', 'MEDIO', 'SEGURO'])) {
-                $query->where('licencia_riesgo', $riesgo);
+                $query->where('riesgo_licencia', $riesgo);
             } elseif ($riesgo === 'SIN_EVALUAR' || $request->riesgo === 'sin_evaluar') {
-                $query->whereNull('licencia_riesgo');
+                $query->whereNull('riesgo_licencia');
             }
         }
 
-        // Filtro de licencias vencidas
+        // Filtro de licencias vencidas (cálculo dinámico desde licencia_vence)
         if ($request->filled('vencidas') && $request->vencidas == '1') {
-            $query->where('licencia_meses_restantes', '<', 0);
+            $query->whereNotNull('licencia_vence')
+                  ->where('licencia_vence', '<', DB::raw('CURDATE()'));
         }
 
         // Filtro por sector del usuario (para sectoristas)
@@ -112,18 +113,18 @@ class EstacionController extends Controller
         ];
         
         $estados = [
-            'A.A' => 'Al Aire',
-            'F.A' => 'Fuera del Aire',
-            'N.I' => 'No Instalada'
+            'AL_AIRE' => 'Al Aire',
+            'FUERA_DEL_AIRE' => 'Fuera del Aire',
+            'NO_INSTALADA' => 'No Instalada'
         ];
-        
+
         $bandas = [
             'FM' => 'FM',
             'AM' => 'AM',
             'VHF' => 'VHF',
             'UHF' => 'UHF'
         ];
-        
+
         $departamentos = Estacion::select('departamento')
                                 ->distinct()
                                 ->orderBy('departamento')
@@ -132,15 +133,16 @@ class EstacionController extends Controller
         // Estadísticas para el dashboard de estaciones (solo 3 estados válidos)
         $estadisticas = [
             'total' => Estacion::count(),
-            'al_aire' => Estacion::where('estado', 'A.A')->count(),
-            'fuera_aire' => Estacion::where('estado', 'F.A')->count(),
-            'no_instalada' => Estacion::where('estado', 'N.I')->count(),
+            'al_aire' => Estacion::where('estado', EstadoEstacion::AL_AIRE)->count(),
+            'fuera_aire' => Estacion::where('estado', EstadoEstacion::FUERA_DEL_AIRE)->count(),
+            'no_instalada' => Estacion::where('estado', EstadoEstacion::NO_INSTALADA)->count(),
             'en_renovacion' => Estacion::where('en_renovacion', true)->count(),
             // Estadísticas de riesgo de licencia
-            'riesgo_alto' => Estacion::where('licencia_riesgo', 'ALTO')->count(),
-            'riesgo_medio' => Estacion::where('licencia_riesgo', 'MEDIO')->count(),
-            'riesgo_seguro' => Estacion::where('licencia_riesgo', 'SEGURO')->count(),
-            'licencias_vencidas' => Estacion::where('licencia_meses_restantes', '<', 0)->count(),
+            'riesgo_alto' => Estacion::where('riesgo_licencia', RiesgoLicencia::ALTO)->count(),
+            'riesgo_medio' => Estacion::where('riesgo_licencia', RiesgoLicencia::MEDIO)->count(),
+            'riesgo_seguro' => Estacion::where('riesgo_licencia', RiesgoLicencia::SEGURO)->count(),
+            'licencias_vencidas' => Estacion::whereNotNull('licencia_vence')
+                ->where('licencia_vence', '<', DB::raw('CURDATE()'))->count(),
         ];
 
         // Opciones de riesgo para filtros
@@ -246,11 +248,11 @@ class EstacionController extends Controller
         ];
         
         $estados = [
-            'A.A' => 'Al Aire',
-            'F.A' => 'Fuera del Aire',
-            'N.I' => 'No Instalada'
+            'AL_AIRE' => 'Al Aire',
+            'FUERA_DEL_AIRE' => 'Fuera del Aire',
+            'NO_INSTALADA' => 'No Instalada'
         ];
-        
+
         $bandas = [
             'FM' => 'FM',
             'AM' => 'AM',
@@ -273,7 +275,7 @@ class EstacionController extends Controller
             'frecuencia' => 'nullable|numeric|min:0.1',
             'canal_tv' => 'nullable|integer|min:2|max:69',
             'presbitero_id' => 'nullable|exists:presbiteros,id',
-            'estado' => 'required|in:A.A,F.A,N.I',
+            'estado' => 'required|in:AL_AIRE,FUERA_DEL_AIRE,NO_INSTALADA',
             'potencia_watts' => 'required|integer|min:1',
             'sector' => 'required|in:NORTE,CENTRO,SUR',
             'latitud' => 'nullable|numeric|between:-90,90',
@@ -316,9 +318,9 @@ class EstacionController extends Controller
         ];
 
         $estados = [
-            'A.A' => 'Al Aire',
-            'F.A' => 'Fuera del Aire',
-            'N.I' => 'No Instalada'
+            'AL_AIRE' => 'Al Aire',
+            'FUERA_DEL_AIRE' => 'Fuera del Aire',
+            'NO_INSTALADA' => 'No Instalada'
         ];
 
         $bandas = [
@@ -355,7 +357,7 @@ class EstacionController extends Controller
             'frecuencia' => 'nullable|numeric|min:0.1',
             'canal_tv' => 'nullable|integer|min:2|max:69',
             'presbitero_id' => 'nullable|exists:presbiteros,id',
-            'estado' => 'required|in:A.A,F.A,N.I',
+            'estado' => 'required|in:AL_AIRE,FUERA_DEL_AIRE,NO_INSTALADA',
             'potencia_watts' => 'required|integer|min:1',
             'sector' => 'required|in:NORTE,CENTRO,SUR',
             'latitud' => 'nullable|numeric|between:-90,90',
@@ -421,8 +423,8 @@ class EstacionController extends Controller
                     'estaciones' => $estaciones,
                     'estadisticas' => [
                         'total' => $estaciones->count(),
-                        'al_aire' => $estaciones->where('estado', 'A.A')->count(),
-                        'fuera_aire' => $estaciones->where('estado', 'F.A')->count()
+                        'al_aire' => $estaciones->where('estado', EstadoEstacion::AL_AIRE)->count(),
+                        'fuera_aire' => $estaciones->where('estado', EstadoEstacion::FUERA_DEL_AIRE)->count()
                     ]
                 ];
             }
@@ -447,7 +449,7 @@ class EstacionController extends Controller
         }
 
         $validated = $request->validate([
-            'estado' => 'required|in:A.A,F.A,N.I',
+            'estado' => 'required|in:AL_AIRE,FUERA_DEL_AIRE,NO_INSTALADA',
             'motivo' => 'nullable|string|max:500',
             'observaciones' => 'nullable|string|max:500'
         ]);
@@ -570,8 +572,8 @@ class EstacionController extends Controller
             'canal_tv' => 'Canal TV',
             'potencia_watts' => 'Potencia (W)',
             'estado' => 'Estado',
-            'licencia_vencimiento' => 'Vence Licencia',
-            'licencia_riesgo' => 'Riesgo',
+            'licencia_vence' => 'Vence Licencia',
+            'riesgo_licencia' => 'Riesgo',
             'celular_encargado' => 'Celular',
         ];
 
@@ -620,9 +622,9 @@ class EstacionController extends Controller
         if ($request->filled('riesgo')) {
             $riesgo = strtoupper($request->riesgo);
             if (in_array($riesgo, ['ALTO', 'MEDIO', 'SEGURO'])) {
-                $query->where('licencia_riesgo', $riesgo);
+                $query->where('riesgo_licencia', $riesgo);
             } elseif ($riesgo === 'SIN_EVALUAR' || $request->riesgo === 'sin_evaluar') {
-                $query->whereNull('licencia_riesgo');
+                $query->whereNull('riesgo_licencia');
             }
         }
 
@@ -696,7 +698,7 @@ class EstacionController extends Controller
         ];
 
         // Columnas seleccionadas
-        $columnasDefecto = ['codigo', 'razon_social', 'localidad', 'provincia', 'departamento', 'sector', 'banda', 'frecuencia', 'potencia_watts', 'estado', 'licencia_vencimiento'];
+        $columnasDefecto = ['codigo', 'razon_social', 'localidad', 'provincia', 'departamento', 'sector', 'banda', 'frecuencia', 'potencia_watts', 'estado', 'licencia_vence'];
         $columnas = $request->input('columnas', $columnasDefecto);
 
         // Si es una cadena separada por comas, convertir a array
@@ -730,9 +732,8 @@ class EstacionController extends Controller
                 'canal_tv' => 'Canal TV',
                 'potencia_watts' => 'Potencia (W)',
                 'estado' => 'Estado',
-                'licencia_vencimiento' => 'Vence Licencia',
-                'licencia_meses_restantes' => 'Meses Restantes',
-                'licencia_riesgo' => 'Riesgo',
+                'licencia_vence' => 'Vence Licencia',
+                'riesgo_licencia' => 'Riesgo',
                 'celular_encargado' => 'Celular',
                 'latitud' => 'Latitud',
                 'longitud' => 'Longitud',

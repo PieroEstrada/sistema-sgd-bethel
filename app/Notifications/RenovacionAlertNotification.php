@@ -52,7 +52,7 @@ class RenovacionAlertNotification extends Notification implements ShouldQueue
                 'localidad' => $e->localidad,
                 'departamento' => $e->departamento,
                 'meses_restantes' => $e->licencia_meses_restantes,
-                'fecha_vencimiento' => $e->licencia_vencimiento?->format('d/m/Y'),
+                'fecha_vencimiento' => $e->licencia_vence?->format('d/m/Y'),
             ])->toArray(),
             'url' => route('estaciones.index', ['riesgo' => 'alto']),
         ];

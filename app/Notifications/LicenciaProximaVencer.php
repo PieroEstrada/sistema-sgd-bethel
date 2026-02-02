@@ -43,7 +43,7 @@ class LicenciaProximaVencer extends Notification
     public function toArray(object $notifiable): array
     {
         return [
-            'type' => 'licencia_vencimiento',
+            'type' => 'licencia_vence',
             'severity' => $this->severity,
             'titulo' => "Licencia por vencer en {$this->diasRestantes} días",
             'mensaje' => "La estación {$this->estacion->razon_social} ({$this->estacion->codigo}) tiene su licencia próxima a vencer",
@@ -51,7 +51,7 @@ class LicenciaProximaVencer extends Notification
             'estacion_codigo' => $this->estacion->codigo,
             'estacion_nombre' => $this->estacion->razon_social,
             'dias_restantes' => $this->diasRestantes,
-            'fecha_vencimiento' => $this->estacion->licencia_vencimiento?->format('d/m/Y'),
+            'fecha_vencimiento' => $this->estacion->licencia_vence?->format('d/m/Y'),
             'url' => route('estaciones.show', $this->estacion->id),
             'sector' => $this->estacion->sector->value ?? null,
             'icono' => 'exclamation-triangle',

@@ -13,8 +13,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('incidencias', function (Blueprint $table) {
-            if (!Schema::hasColumn('incidencias', 'area_responsable')) {
-                $table->string('area_responsable')
+            if (!Schema::hasColumn('incidencias', 'area_responsable_actual')) {
+                $table->string('area_responsable_actual', 100)
                     ->nullable()
                     ->after('tipo');
             }
@@ -27,8 +27,8 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('incidencias', function (Blueprint $table) {
-            if (Schema::hasColumn('incidencias', 'area_responsable')) {
-                $table->dropColumn('area_responsable');
+            if (Schema::hasColumn('incidencias', 'area_responsable_actual')) {
+                $table->dropColumn('area_responsable_actual');
             }
         });
     }
